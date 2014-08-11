@@ -125,29 +125,6 @@ class tracenode(object):
         multip.operation = 'mul'        
         return multip
         
-#        if not isinstance(other, tracenode):
-#            if isinstance(other, int):
-#                other = float(other)
-#            if isinstance(other, float):             
-#                for j in range(len(tracenode.othernodelist)):
-#                    if tracenode.othernodelist[j].x==other:
-#                        j=j+1
-#                        break
-#                else:
-#                    othernode = tracenode(other)
-#                    tracenode.othernodelist.append(othernode) #wird für eine zahl, z.b. bei u+2 2 als neuer knoten bestimmt und dann von den knoten u und 2 aus u+2 berechnet?oder ist da nur u ein knoten?
-#                    j = len(tracenode.othernodelist)
-#                multip = tracenode(self.x*tracenode.othernodelist[j-1].x)
-#                multip.origin = [self.i,tracenode.othernodelist[j-1].i]
-#                print('multiplication of {} and {} let to {}.'.format(self.i, tracenode.othernodelist[j-1].i, multip.i))
-#                return multip
-#            else:
-#                raise TypeError('Multiplication is only defined for types tracenode or float or int.')
-#        multip = tracenode(self.x*other.x)
-#        multip.origin = [self.i,other.i]
-#        print('multiplication of {} and {} let to {}.'.format(self.i, other.i,multip.i))
-#        return multip
-        
         
     def __rmul__(self,other):
         return self*other
@@ -176,33 +153,6 @@ class tracenode(object):
             divis.origin = [self.i, other.i]
         divis.operation = 'div'
         return divis
-        
-#        if not isinstance(other, tracenode):
-#            if other==0:
-#                raise ZeroDivisionError('Division by Zero not possible.')
-#            if isinstance(other, int):
-#                other = float(other)
-#            if isinstance(other, float):             
-#                for j in range(len(tracenode.othernodelist)):
-#                    if tracenode.othernodelist[j].x==other:
-#                        j=j+1
-#                        break
-#                else:
-#                    othernode = tracenode(other)
-#                    tracenode.othernodelist.append(othernode) #wird für eine zahl, z.b. bei u+2 2 als neuer knoten bestimmt und dann von den knoten u und 2 aus u+2 berechnet?oder ist da nur u ein knoten?
-#                    j = len(tracenode.othernodelist)
-#                divis = tracenode(self.x/tracenode.othernodelist[j-1].x)
-#                divis.origin = [self.i,tracenode.othernodelist[j-1].i]
-#                print('division of {} and {} let to {}.'.format(self.i, tracenode.othernodelist[j-1].i, divis.i))
-#                return divis
-#            else:
-#                raise TypeError('Division is only defined for types tracenode or float or int.')
-#        if other.x==0:
-#            raise ZeroDivisionError
-#        divis = tracenode(self.x/other.x)
-#        divis.origin = [self.i,other.i]
-#        print('division of {} and {} let to {}.'.format(self.i, other.i,divis.i))
-#        return divis
         
         
     def __pow__(self, other):
