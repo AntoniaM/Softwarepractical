@@ -14,7 +14,7 @@ class tracenode(object):
     An object of the class represents a node in a computational graph for a function.
     '''
     it = 0 # serves as counter for the instances created..
-    othernodelist = []
+    ###othernodelist = []
     tracenodelist = []  #in this list, all the created instances will be stored
     storelist = [] #the storelist will be used when setting the attribute 'active' of active tracenode instances to 'True'
         
@@ -27,6 +27,7 @@ class tracenode(object):
         -self.i:        id-number of the node
         -self.origin:   list, containing the nodes, the created node is computed of
         -self.active:   states, if the node playes an active role when evaluating the function. default value: False. To see if a node is active or not, the method 'setallactive' needs to be run after a function has been evaluated.
+        -self.operation:states the operation self.x arises out of        
         '''
         if not isinstance(x, float):
             if isinstance(x,int):
@@ -38,13 +39,14 @@ class tracenode(object):
         self.origin = [self.i] #if the created tracenode is a result of an operation, then self.origin will be set to the corresponding origin indices while the operation is executed..
         ########## self._origin + get/set methoden?????????? weil origin bei durchführen einer Operation verändert wird...
         self.active = False #Mittels Tiefensuche wird später festgestellt, ob object active ist oder nicht...default-value: False.        
-        print('created new object with tracer number {}'.format(self.i))
+        self.operation = 'Id' #Default value: Identity function        
+        self.opconst = None #states, if the operation was performed using a constant
         tracenode.it = tracenode.it+1
         tracenode.tracenodelist.append(self) #stores all the during a function evaluation created objects of type tracenode in a list.
 
 
     def __repr__(self):
-        return ' tracer number {} \torigin {}\tactive: {}\tvalue {}\n'.format(self.i,self.origin,self.active,self.x)
+        return ' tracer number {} \torigin{} \toperation {}\t with const. {}\tactive: {}\tvalue {}\n'.format(self.i,self.origin,self.operation,self.opconst, self.active,self.x)
         
         
     def __add__(self, other):
@@ -54,30 +56,23 @@ class tracenode(object):
                             tracenode and integer, tracenode and float. and vice versa.
         -input:     tracenode, tracenode/integer/float
         -output:    tracenode addit, where addit.x contains the value of the addition, 
-                    addit.origin contains a list of the tracenumbers of the summands
+                    addit.origin contains a list of the tracenumbers of the summands,
+                    addit.operation states, that addit was created by an addition
         '''
         if not isinstance(other, tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
             if isinstance(other, int):
                 other = float(other)
-            if isinstance(other, float):             
-                for j in range(len(tracenode.othernodelist)):
-                    if tracenode.othernodelist[j].x==other:
-                        j=j+1
-                        break                    
-                else:
-                    othernode = tracenode(other)
-                    tracenode.othernodelist.append(othernode) #wird für eine zahl, z.b. bei u+2 2 als neuer knoten bestimmt und dann von den knoten u und 2 aus u+2 berechnet?oder ist da nur u ein knoten?
-                    j = len(tracenode.othernodelist)
-                addit = tracenode(self.x + tracenode.othernodelist[j-1].x)
-                addit.origin = [self.i,tracenode.othernodelist[j-1].i]
-                print('addition of {} and {} let to {}.'.format(self.i,tracenode.othernodelist[j-1].i,addit.i))
-                return addit
-            else:
+            else: 
                 raise TypeError('Addition is only defined for types tracenode and tracenode or float or int.')
-        addit = tracenode(self.x + other.x)
-        addit.origin = [self.i,other.i]
-        print('addition of {} and {} let to {}.'.format(self.i,other.i,addit.i))
+            addit = tracenode(self.x + other)     
+            addit.opconst = other
+            addit.origin = [self.i]      
+        else:
+            addit = tracenode(self.x + other.x)          
+            addit.origin = [self.i, other.i]
+        addit.operation = 'add'
         return addit
+
 
         
     def __radd__(self,other):
@@ -91,29 +86,20 @@ class tracenode(object):
                             tracenode and integer, tracenode and float. and vice versa.
         -input:     tracenode, tracenode/integer/float
         -output:    tracenode subtr, where subtr.x contains the value of the subtraction,
-                    subr.origin contains a list of the tracenumbers of the summands
+                    subtr.origin contains a list of the tracenumbers of the summands
         '''
         if not isinstance(other, tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
             if isinstance(other, int):
                 other = float(other)
-            if isinstance(other, float):             
-                for j in range(len(tracenode.othernodelist)):
-                    if tracenode.othernodelist[j].x==other:
-                        j=j+1
-                        break                    
-                else:
-                    othernode = tracenode(other)
-                    tracenode.othernodelist.append(othernode) #wird für eine zahl, z.b. bei u+2 2 als neuer knoten bestimmt und dann von den knoten u und 2 aus u+2 berechnet?oder ist da nur u ein knoten?
-                    j = len(tracenode.othernodelist)
-                subtr = tracenode(self.x - tracenode.othernodelist[j-1].x)
-                subtr.origin = [self.i,tracenode.othernodelist[j-1].i]
-                print('subtraction of {} and {} let to {}.'.format(self.i,tracenode.othernodelist[j-1].i,subtr.i))
-                return subtr
-            else:
-                raise TypeError('Subtraction is only defined for types tracenode or float or int.')
-        subtr = tracenode(self.x - other.x)
-        subtr.origin = [self.i,other.i]
-        print('subtraction of {} and {} let to {}.'.format(self.i,other.i,subtr.i))
+            else: 
+                raise TypeError('Subtraction is only defined for types tracenode and tracenode or float or int.')
+            subtr = tracenode(self.x - other)     
+            subtr.opconst = other
+            subtr.origin = [self.i]      
+        else:
+            subtr = tracenode(self.x - other.x)     
+            subtr.origin = [self.i, other.i]
+        subtr.operation = 'sub' 
         return subtr
         
             
@@ -125,28 +111,42 @@ class tracenode(object):
         -output:    tracenode multip, where multip.x contains the resultvalue of the multiplication,
                     multip.origin contains a list of the tracenumbers of the factors.
         '''
-        if not isinstance(other, tracenode):
+        if not isinstance(other, tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
             if isinstance(other, int):
                 other = float(other)
-            if isinstance(other, float):             
-                for j in range(len(tracenode.othernodelist)):
-                    if tracenode.othernodelist[j].x==other:
-                        j=j+1
-                        break
-                else:
-                    othernode = tracenode(other)
-                    tracenode.othernodelist.append(othernode) #wird für eine zahl, z.b. bei u+2 2 als neuer knoten bestimmt und dann von den knoten u und 2 aus u+2 berechnet?oder ist da nur u ein knoten?
-                    j = len(tracenode.othernodelist)
-                multip = tracenode(self.x*tracenode.othernodelist[j-1].x)
-                multip.origin = [self.i,tracenode.othernodelist[j-1].i]
-                print('multiplication of {} and {} let to {}.'.format(self.i, tracenode.othernodelist[j-1].i, multip.i))
-                return multip
-            else:
-                raise TypeError('Multiplication is only defined for types tracenode or float or int.')
-        multip = tracenode(self.x*other.x)
-        multip.origin = [self.i,other.i]
-        print('multiplication of {} and {} let to {}.'.format(self.i, other.i,multip.i))
+            else: 
+                raise TypeError('Multiplication is only defined for types tracenode and tracenode or float or int.')
+            multip = tracenode(self.x * other)     
+            multip.opconst = other
+            multip.origin = [self.i]      
+        else:
+            multip = tracenode(self.x + other.x)
+            multip.origin = [self.i, other.i]
+        multip.operation = 'mul'        
         return multip
+        
+#        if not isinstance(other, tracenode):
+#            if isinstance(other, int):
+#                other = float(other)
+#            if isinstance(other, float):             
+#                for j in range(len(tracenode.othernodelist)):
+#                    if tracenode.othernodelist[j].x==other:
+#                        j=j+1
+#                        break
+#                else:
+#                    othernode = tracenode(other)
+#                    tracenode.othernodelist.append(othernode) #wird für eine zahl, z.b. bei u+2 2 als neuer knoten bestimmt und dann von den knoten u und 2 aus u+2 berechnet?oder ist da nur u ein knoten?
+#                    j = len(tracenode.othernodelist)
+#                multip = tracenode(self.x*tracenode.othernodelist[j-1].x)
+#                multip.origin = [self.i,tracenode.othernodelist[j-1].i]
+#                print('multiplication of {} and {} let to {}.'.format(self.i, tracenode.othernodelist[j-1].i, multip.i))
+#                return multip
+#            else:
+#                raise TypeError('Multiplication is only defined for types tracenode or float or int.')
+#        multip = tracenode(self.x*other.x)
+#        multip.origin = [self.i,other.i]
+#        print('multiplication of {} and {} let to {}.'.format(self.i, other.i,multip.i))
+#        return multip
         
         
     def __rmul__(self,other):
@@ -161,32 +161,48 @@ class tracenode(object):
         -output:    tracenode divis, where divis.x contains the resultvalue of the division,
                     divis.origin contains a list of the tracenumbers of the factors.
         '''
-        if not isinstance(other, tracenode):
-            if other==0:
-                raise ZeroDivisionError('Division by Zero not possible.')
+        if not isinstance(other, tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...               
+            if other ==0:
+                raise ZeroDivisionError('Division by Zero not possible')
             if isinstance(other, int):
                 other = float(other)
-            if isinstance(other, float):             
-                for j in range(len(tracenode.othernodelist)):
-                    if tracenode.othernodelist[j].x==other:
-                        j=j+1
-                        break
-                else:
-                    othernode = tracenode(other)
-                    tracenode.othernodelist.append(othernode) #wird für eine zahl, z.b. bei u+2 2 als neuer knoten bestimmt und dann von den knoten u und 2 aus u+2 berechnet?oder ist da nur u ein knoten?
-                    j = len(tracenode.othernodelist)
-                divis = tracenode(self.x/tracenode.othernodelist[j-1].x)
-                divis.origin = [self.i,tracenode.othernodelist[j-1].i]
-                print('division of {} and {} let to {}.'.format(self.i, tracenode.othernodelist[j-1].i, divis.i))
-                return divis
-            else:
-                raise TypeError('Division is only defined for types tracenode or float or int.')
-        if other.x==0:
-            raise ZeroDivisionError
-        divis = tracenode(self.x/other.x)
-        divis.origin = [self.i,other.i]
-        print('division of {} and {} let to {}.'.format(self.i, other.i,divis.i))
+            else: 
+                raise TypeError('Division is only defined for types tracenode and tracenode or float or int.')
+            divis = tracenode(self.x / other)     
+            divis.opconst = other
+            divis.origin = [self.i]      
+        else:
+            divis = tracenode(self.x / other.x)       
+            divis.origin = [self.i, other.i]
+        divis.operation = 'div'
         return divis
+        
+#        if not isinstance(other, tracenode):
+#            if other==0:
+#                raise ZeroDivisionError('Division by Zero not possible.')
+#            if isinstance(other, int):
+#                other = float(other)
+#            if isinstance(other, float):             
+#                for j in range(len(tracenode.othernodelist)):
+#                    if tracenode.othernodelist[j].x==other:
+#                        j=j+1
+#                        break
+#                else:
+#                    othernode = tracenode(other)
+#                    tracenode.othernodelist.append(othernode) #wird für eine zahl, z.b. bei u+2 2 als neuer knoten bestimmt und dann von den knoten u und 2 aus u+2 berechnet?oder ist da nur u ein knoten?
+#                    j = len(tracenode.othernodelist)
+#                divis = tracenode(self.x/tracenode.othernodelist[j-1].x)
+#                divis.origin = [self.i,tracenode.othernodelist[j-1].i]
+#                print('division of {} and {} let to {}.'.format(self.i, tracenode.othernodelist[j-1].i, divis.i))
+#                return divis
+#            else:
+#                raise TypeError('Division is only defined for types tracenode or float or int.')
+#        if other.x==0:
+#            raise ZeroDivisionError
+#        divis = tracenode(self.x/other.x)
+#        divis.origin = [self.i,other.i]
+#        print('division of {} and {} let to {}.'.format(self.i, other.i,divis.i))
+#        return divis
         
         
     def __pow__(self, other):
@@ -202,7 +218,8 @@ class tracenode(object):
             raise TypeError('function power is only defined for to the power of integers.')
         power = tracenode(self.x**other)
         power.origin = [self.i]
-        print('taken value with tracer number {} to the power of {} let to result with tracer number {}.'.format(self.i,other,power.i))
+        power.operation = 'pow'
+        power.opconst = other
         return power
     
 
@@ -263,13 +280,13 @@ def setallactives(result):
 #p = testfunction3(u,v)
 #print('The result is {} and has tracer number {}.'.format(p.x, p.i))
     
-#def testfunction2(w):
-#    A=array([[1,0],[0,1]])
-#    return dot(A,w)
+def testfunction2(w):
+    A=array([[1,0],[0,1]])
+    return dot(A,w)
     
-#l1 = tracenode(2.)
-#l2 = tracenode(1.)  
-#l3 = testfunction2(array([l1,l2]))
+l1 = tracenode(2.)
+l2 = tracenode(1.)  
+l3 = testfunction2(array([l1,l2]))
 ##print('The result is [{},{}].'.format(l3[0].x,l3[1].x))
     
 #def testfunction4(u,v):
