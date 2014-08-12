@@ -64,6 +64,8 @@ def test_identity():
     l1 = tracenode(2.)
     l2 = tracenode(1.)
     l3 = testfunction2(array([l1,l2]))
+###    print(l3)
+###    print(tracenode.tracenodelist)
     result = array([l3[0].x,l3[1].x]) 
     expected = array([2,1])
     assert allclose(result,expected),'Sth went wrong with __add__ or __mul__'
@@ -138,7 +140,7 @@ def test_identity():
     tracenode.tracenodelist = []
     x = array([tracenode(1),tracenode(1)])
     result = testfunction9(x)
-    #print(result)
+###    print(result)
     expected = array([2,1,1])
     assert allclose(array([result[0].x,result[1].x,result[2].x]),expected), 'sth went wrong in testfunction9'
     

@@ -36,8 +36,9 @@ class tracenode(object):
                 raise TypeError('input argument of function needs to be a float.')
         self.x = x 
         self.i = tracenode.it
-        self.origin = [self.i] #if the created tracenode is a result of an operation, then self.origin will be set to the corresponding origin indices while the operation is executed..
-        ########## self._origin + get/set methoden?????????? weil origin bei durchführen einer Operation verändert wird...
+        self.parents = [self.i] #if the created tracenode is a result of an operation, then self.parents will be set to the corresponding parents ids while the operation is executed..
+        self.children = []
+        #####self.origin = [self.i] #if the created tracenode is a result of an operation, then self.origin will be set to the corresponding origin indices while the operation is executed..
         self.active = False #Mittels Tiefensuche wird später festgestellt, ob object active ist oder nicht...default-value: False.        
         self.operation = 'Id' #Default value: Identity function        
         self.opconst = None #states, if the operation was performed using a constant
@@ -46,7 +47,7 @@ class tracenode(object):
 
 
     def __repr__(self):
-        return ' tracer number {} \torigin{} \toperation {}\t with const. {}\tactive: {}\tvalue {}\n'.format(self.i,self.origin,self.operation,self.opconst, self.active,self.x)
+        return ' tracer number {} \tparents: {} \toperation: {}\twith const.: {}\tchildren: {}\tactive: {}\tvalue {}\n'.format(self.i, self.parents, self.operation,self.opconst, self.children, self.active,self.x)
         
         
     def __add__(self, other):
@@ -65,11 +66,13 @@ class tracenode(object):
             else: 
                 raise TypeError('Addition is only defined for types tracenode and tracenode or float or int.')
             addit = tracenode(self.x + other)     
-            addit.opconst = other
-            addit.origin = [self.i]      
+            addit.opconst = other 
+            addit.parents = [self.i]
         else:
             addit = tracenode(self.x + other.x)          
-            addit.origin = [self.i, other.i]
+            addit.parents = [self.i, other.i]
+            other.children.append(addit.i)
+        self.children.append(addit.i)
         addit.operation = 'add'
         return addit
 
@@ -95,10 +98,12 @@ class tracenode(object):
                 raise TypeError('Subtraction is only defined for types tracenode and tracenode or float or int.')
             subtr = tracenode(self.x - other)     
             subtr.opconst = other
-            subtr.origin = [self.i]      
+            subtr.parents = [self.i]      
         else:
             subtr = tracenode(self.x - other.x)     
-            subtr.origin = [self.i, other.i]
+            subtr.parents = [self.i, other.i]
+            other.children.append(subtr.i)
+        self.children.append(subtr.i)
         subtr.operation = 'sub' 
         return subtr
         
@@ -118,10 +123,12 @@ class tracenode(object):
                 raise TypeError('Multiplication is only defined for types tracenode and tracenode or float or int.')
             multip = tracenode(self.x * other)     
             multip.opconst = other
-            multip.origin = [self.i]      
+            multip.parents = [self.i] 
         else:
             multip = tracenode(self.x + other.x)
-            multip.origin = [self.i, other.i]
+            multip.parents = [self.i, other.i]
+            other.children.append(multip.i)
+        self.children.append(multip.i)
         multip.operation = 'mul'        
         return multip
         
@@ -147,10 +154,12 @@ class tracenode(object):
                 raise TypeError('Division is only defined for types tracenode and tracenode or float or int.')
             divis = tracenode(self.x / other)     
             divis.opconst = other
-            divis.origin = [self.i]      
+            divis.parents = [self.i]      
         else:
             divis = tracenode(self.x / other.x)       
-            divis.origin = [self.i, other.i]
+            divis.parents = [self.i, other.i]
+            other.children.append(divis.i)
+        self.children.append(divis.i)
         divis.operation = 'div'
         return divis
         
@@ -167,8 +176,9 @@ class tracenode(object):
         if not isinstance(other, int):
             raise TypeError('function power is only defined for to the power of integers.')
         power = tracenode(self.x**other)
-        power.origin = [self.i]
+        power.parents = [self.i]
         power.operation = 'pow'
+        self.children.append(power.i)
         power.opconst = other
         return power
     
@@ -200,9 +210,9 @@ def setallactives(result):
         node.active = True
         del(storelist[0]) #the current node can now be deleted from the 'wating list'
         #now expand and save the bigger origin as first element of the storelist.we'll deal with this element later..
-        if len(node.origin)>1: #
-            storelist = [tracenode.tracenodelist[node.origin[1]]] + storelist   
-        smallnode  = tracenode.tracenodelist[node.origin[0]]  #the small origin is what we concentrate on now.
+        if len(node.parents)>1: #
+            storelist = [tracenode.tracenodelist[node.parents[1]]] + storelist   
+        smallnode  = tracenode.tracenodelist[node.parents[0]]  #the small origin is what we concentrate on now.
         #if the small has not yet become activated, it becomes the new current node for the next while loop
         if smallnode.active == False:
             storelist = [smallnode] + storelist #here, also save the smaller origin in the storelist, but it will be used and deleted right in the beginning of the next while-loop.so this is the current node.
@@ -231,8 +241,9 @@ def setallactives(result):
 #print('The result is {} and has tracer number {}.'.format(p.x, p.i))
     
 def testfunction2(w):
-    A=array([[1,0],[0,1]])
-    return dot(A,w)
+    A = array([[1,0],[0,1]])
+    b = dot(A,w)
+    return b[1]
     
 l1 = tracenode(2.)
 l2 = tracenode(1.)  
