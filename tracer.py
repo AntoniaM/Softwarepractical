@@ -15,7 +15,7 @@ class tracenode(object):
     '''
     it = 0 # serves as counter for the instances created..
     ###othernodelist = []
-    tracenodelist = []  #in this list, all the created instances will be stored
+    #tracenodelist = []  #in this list, all the created instances will be stored
     storelist = [] #the storelist will be used when setting the attribute 'active' of active tracenode instances to 'True'
         
         
@@ -23,11 +23,15 @@ class tracenode(object):
         '''
         The class tracenode is initialized with a float or integer, the actual value of the node which is created.
         Attributes:
-        -self.x:        actual value of the node
-        -self.i:        id-number of the node
-        -self.origin:   list, containing the nodes, the created node is computed of
-        -self.active:   states, if the node playes an active role when evaluating the function. default value: False. To see if a node is active or not, the method 'setallactive' needs to be run after a function has been evaluated.
-        -self.operation:states the operation self.x arises out of        
+        -self.x:            actual value of the node
+        -self.i:            id-number of the node
+        -self.origin:       set containing the input nodes which flow into the computation of the node self
+        -self.contributesto:set containing the result nodes, in whose comoputation the node self flows into
+        -self.parents:      list containing the nodes the created node is computed out of
+        -self.children:     list containing the nodes for whose computation the node self is needed for
+        -self.active:       states, if the node plays an active role when evaluating the function. default value: False. To see if a node is active or not, the method 'setallactive' needs to be run after a function has been evaluated.
+        -self.operation:    states the operation self.x arises out of     
+        -self.opconst:      states if the operation was performed using a constant (when self.parents is a list of length 1)
         '''
         if not isinstance(x, float):
             if isinstance(x,int):
@@ -36,18 +40,32 @@ class tracenode(object):
                 raise TypeError('input argument of function needs to be a float.')
         self.x = x 
         self.i = tracenode.it
-        self.parents = [self.i] #if the created tracenode is a result of an operation, then self.parents will be set to the corresponding parents ids while the operation is executed..
+        self.parents = [self] #if the created tracenode is a result of an operation, then self.parents will be set to the corresponding parents ids while the operation is executed..
         self.children = []
+        self.origin = set([self])
+        self.contributesto = set()
         #####self.origin = [self.i] #if the created tracenode is a result of an operation, then self.origin will be set to the corresponding origin indices while the operation is executed..
         self.active = False #Mittels Tiefensuche wird später festgestellt, ob object active ist oder nicht...default-value: False.        
         self.operation = 'Id' #Default value: Identity function        
         self.opconst = None #states, if the operation was performed using a constant
         tracenode.it = tracenode.it+1
-        tracenode.tracenodelist.append(self) #stores all the during a function evaluation created objects of type tracenode in a list.
+        #tracenode.tracenodelist.append(self) #stores all the during a function evaluation created objects of type tracenode in a list.
 
 
     def __repr__(self):
-        return ' tracer number {} \tparents: {} \toperation: {}\twith const.: {}\tchildren: {}\tactive: {}\tvalue {}\n'.format(self.i, self.parents, self.operation,self.opconst, self.children, self.active,self.x)
+        # for reasons of readability, instead of printing the set origin, a list of the tracer numbers of the tracenodes contained in the set origin is printed..
+        ortrace = []
+        for x in self.origin:
+            ortrace.append(x.i)
+        # for reasons of readability, instead of printing the list of tracenodes in parents, a list of the tracer numbers of the tracenodes contained in the list parents is printed.
+        parentstrace  = []
+        for x in self.parents:
+            parentstrace.append(x.i)
+        # for reasons of readability, instead of printing the list of tracenodes in children, a list of the tracer numbers of the tracenodes contained in the list children is printed.
+        childrentrace = []
+        for x in self.children:
+            childrentrace.append(x.i)
+        return ' tracer no. {} \tparents: {} \toperation: {}\twith const.: {}\tchildren: {}\tactive: {}\torigin: {}\tvalue {}\n'.format(self.i, parentstrace, self.operation,self.opconst, childrentrace, self.active, ortrace ,self.x)
         
         
     def __add__(self, other):
@@ -67,13 +85,17 @@ class tracenode(object):
                 raise TypeError('Addition is only defined for types tracenode and tracenode or float or int.')
             addit = tracenode(self.x + other)     
             addit.opconst = other 
-            addit.parents = [self.i]
+            addit.parents = [self] 
+            addit.origin = self.origin
         else:
             addit = tracenode(self.x + other.x)          
-            addit.parents = [self.i, other.i]
-            other.children.append(addit.i)
-        self.children.append(addit.i)
+            addit.parents = [self, other]
+            other.children.append(addit)
+            addit.origin = self.origin | other.origin
+        self.children.append(addit)
         addit.operation = 'add'
+        print(addit)
+
         return addit
 
 
@@ -98,13 +120,17 @@ class tracenode(object):
                 raise TypeError('Subtraction is only defined for types tracenode and tracenode or float or int.')
             subtr = tracenode(self.x - other)     
             subtr.opconst = other
-            subtr.parents = [self.i]      
+            subtr.parents = [self]   
+            subtr.origin = self.origin
         else:
             subtr = tracenode(self.x - other.x)     
-            subtr.parents = [self.i, other.i]
+            subtr.parents = [self, other]
             other.children.append(subtr.i)
-        self.children.append(subtr.i)
+            subtr.origin = self.origin | other.origin
+        self.children.append(subtr)
         subtr.operation = 'sub' 
+        
+        print(subtr)
         return subtr
         
             
@@ -123,13 +149,17 @@ class tracenode(object):
                 raise TypeError('Multiplication is only defined for types tracenode and tracenode or float or int.')
             multip = tracenode(self.x * other)     
             multip.opconst = other
-            multip.parents = [self.i] 
+            multip.parents = [self] 
+            multip.origin = self.origin
         else:
             multip = tracenode(self.x + other.x)
-            multip.parents = [self.i, other.i]
-            other.children.append(multip.i)
-        self.children.append(multip.i)
-        multip.operation = 'mul'        
+            multip.parents = [self, other]
+            other.children.append(multip.i)        
+            multip.origin = self.origin | other.origin
+        self.children.append(multip)
+        multip.operation = 'mul'  
+        
+        print(multip)
         return multip
         
         
@@ -154,13 +184,17 @@ class tracenode(object):
                 raise TypeError('Division is only defined for types tracenode and tracenode or float or int.')
             divis = tracenode(self.x / other)     
             divis.opconst = other
-            divis.parents = [self.i]      
+            divis.parents = [self]  
+            divis.origin = self.origin
         else:
             divis = tracenode(self.x / other.x)       
-            divis.parents = [self.i, other.i]
+            divis.parents = [self, other]
             other.children.append(divis.i)
-        self.children.append(divis.i)
+            divis.origin = self.origin | other.origin
+        self.children.append(divis)
         divis.operation = 'div'
+        
+        print(divis)
         return divis
         
         
@@ -176,49 +210,53 @@ class tracenode(object):
         if not isinstance(other, int):
             raise TypeError('function power is only defined for to the power of integers.')
         power = tracenode(self.x**other)
-        power.parents = [self.i]
+        power.parents = [self]
         power.operation = 'pow'
-        self.children.append(power.i)
+        self.children.append(power)
         power.opconst = other
+        power.origin = self.origin
+        
+        print(power)
         return power
     
 
 
 
     
-def setallactives(result):
-    '''
-    method setallactives:   method can be run after a function of tracenodes has been evaluated and 
-                            thus a tracenodelist is created. 
-                            the method sets the attribute 'active' on 'True' for all tracenode instances, 
-                            which play an active role in the computation of the value of the function.
-                            Meaning those, which were actually needed in order to compute the final function value.
-                            The method runs through the computational graph using depth-first-search.
-    -input:     tracenode which is the result of a function evaluation.
-    -output:    none.
-    '''
-    #using 'depth-first-search':
-    #first, store the result(s) in a list->easier to handle both cases...
-    if type(result)==tracenode:
-        result = [result]
-    if type(result)==ndarray:
-        result = result.tolist()
-    ##########wrong input exception einfügen!!
-    storelist = result # the store list is a 'waiting list' for all the nodes, that wait to be activated..
-    while (len(storelist)>0):#as long as there are nodes node tested yet:
-        node = storelist[0] #take the first node from the top of the list (beginning), this is the current node
-        node.active = True
-        del(storelist[0]) #the current node can now be deleted from the 'wating list'
-        #now expand and save the bigger origin as first element of the storelist.we'll deal with this element later..
-        if len(node.parents)>1: #
-            storelist = [tracenode.tracenodelist[node.parents[1]]] + storelist   
-        smallnode  = tracenode.tracenodelist[node.parents[0]]  #the small origin is what we concentrate on now.
-        #if the small has not yet become activated, it becomes the new current node for the next while loop
-        if smallnode.active == False:
-            storelist = [smallnode] + storelist #here, also save the smaller origin in the storelist, but it will be used and deleted right in the beginning of the next while-loop.so this is the current node.
+#def setallactives(result):
+#    '''
+#    method setallactives:   method can be run after a function of tracenodes has been evaluated and 
+#                            thus a tracenodelist is created. 
+#                            the method sets the attribute 'active' on 'True' for all tracenode instances, 
+#                            which play an active role in the computation of the value of the function.
+#                            Meaning those, which were actually needed in order to compute the final function value.
+#                            The method runs through the computational graph using depth-first-search.
+#    -input:     tracenode which is the result of a function evaluation.
+#    -output:    none.
+#    '''
+#    #using 'depth-first-search':
+#    #first, store the result(s) in a list->easier to handle both cases...
+#    if type(result)==tracenode:
+#        result = [result]
+#    if type(result)==ndarray:
+#        result = result.tolist()
+#    ##########wrong input exception einfügen!!
+#    storelist = result # the store list is a 'waiting list' for all the nodes, that wait to be activated..
+#    while (len(storelist)>0):#as long as there are nodes node tested yet:
+#        node = storelist[0] #take the first node from the top of the list (beginning), this is the current node
+#        node.active = True
+#        del(storelist[0]) #the current node can now be deleted from the 'wating list'
+#        #now expand and save the bigger origin as first element of the storelist.we'll deal with this element later..
+#        if len(node.parents)>1: #
+#            storelist = [tracenode.tracenodelist[node.parents[1]]] + storelist   
+#        smallnode  = tracenode.tracenodelist[node.parents[0]]  #the small origin is what we concentrate on now.
+#        #if the small has not yet become activated, it becomes the new current node for the next while loop
+#        if smallnode.active == False:
+#            storelist = [smallnode] + storelist #here, also save the smaller origin in the storelist, but it will be used and deleted right in the beginning of the next while-loop.so this is the current node.
 
         
-        
+
+            
         
         
         
