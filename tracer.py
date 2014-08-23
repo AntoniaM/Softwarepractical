@@ -29,7 +29,6 @@ class tracenode(object):
         -self.contributesto:set containing the result nodes, in whose comoputation the node self flows into
         -self.parents:      list containing the nodes the created node is computed out of
         -self.children:     list containing the nodes for whose computation the node self is needed for
-        -self.active:       states, if the node plays an active role when evaluating the function. default value: False. To see if a node is active or not, the method 'setallactive' needs to be run after a function has been evaluated.
         -self.operation:    states the operation self.x arises out of     
         -self.opconst:      states if the operation was performed using a constant (when self.parents is a list of length 1)
         '''
@@ -45,7 +44,6 @@ class tracenode(object):
         self.origin = set([self])
         self.contributesto = set()
         #####self.origin = [self.i] #if the created tracenode is a result of an operation, then self.origin will be set to the corresponding origin indices while the operation is executed..
-        self.active = False #Mittels Tiefensuche wird später festgestellt, ob object active ist oder nicht...default-value: False.        
         self.operation = 'Id' #Default value: Identity function        
         self.opconst = None #states, if the operation was performed using a constant
         tracenode.it = tracenode.it+1
@@ -58,6 +56,9 @@ class tracenode(object):
         for x in self.origin:
             ortrace.append(x.i)
         # for reasons of readability, instead of printing the list of tracenodes in parents, a list of the tracer numbers of the tracenodes contained in the list parents is printed.
+        contrtrace = []
+        for x in self.contributesto:
+            contrtrace.append(x.i)
         parentstrace  = []
         for x in self.parents:
             parentstrace.append(x.i)
@@ -65,7 +66,7 @@ class tracenode(object):
         childrentrace = []
         for x in self.children:
             childrentrace.append(x.i)
-        return ' tracer no. {} \tparents: {} \toperation: {}\twith const.: {}\tchildren: {}\tactive: {}\torigin: {}\tvalue {}\n'.format(self.i, parentstrace, self.operation,self.opconst, childrentrace, self.active, ortrace ,self.x)
+        return ' tracer no. {} \tparents: {} \toperation: {}\twith const.: {}\tchildren: {}\torigin: {}\tcontributesto: {}\tvalue {}\n'.format(self.i, parentstrace, self.operation,self.opconst, childrentrace, ortrace ,contrtrace, self.x)
         
         
     def __add__(self, other):
@@ -221,38 +222,61 @@ class tracenode(object):
     
 
 
-
+class graph (object):
+    def __init__(self, independent, dependent):
+        
+        self.independent = independent
+        self.dependent = dependent
+        
+        #def set_contriputesto(self):
+            
+            
+            
     
-#def setallactives(result):
-#    '''
-#    method setallactives:   method can be run after a function of tracenodes has been evaluated and 
-#                            thus a tracenodelist is created. 
-#                            the method sets the attribute 'active' on 'True' for all tracenode instances, 
-#                            which play an active role in the computation of the value of the function.
-#                            Meaning those, which were actually needed in order to compute the final function value.
-#                            The method runs through the computational graph using depth-first-search.
-#    -input:     tracenode which is the result of a function evaluation.
-#    -output:    none.
-#    '''
-#    #using 'depth-first-search':
-#    #first, store the result(s) in a list->easier to handle both cases...
-#    if type(result)==tracenode:
-#        result = [result]
-#    if type(result)==ndarray:
-#        result = result.tolist()
-#    ##########wrong input exception einfügen!!
-#    storelist = result # the store list is a 'waiting list' for all the nodes, that wait to be activated..
-#    while (len(storelist)>0):#as long as there are nodes node tested yet:
-#        node = storelist[0] #take the first node from the top of the list (beginning), this is the current node
-#        node.active = True
-#        del(storelist[0]) #the current node can now be deleted from the 'wating list'
-#        #now expand and save the bigger origin as first element of the storelist.we'll deal with this element later..
-#        if len(node.parents)>1: #
-#            storelist = [tracenode.tracenodelist[node.parents[1]]] + storelist   
-#        smallnode  = tracenode.tracenodelist[node.parents[0]]  #the small origin is what we concentrate on now.
-#        #if the small has not yet become activated, it becomes the new current node for the next while loop
-#        if smallnode.active == False:
-#            storelist = [smallnode] + storelist #here, also save the smaller origin in the storelist, but it will be used and deleted right in the beginning of the next while-loop.so this is the current node.
+def set_contributesto(result):
+    '''
+    method setallactives:   method can be run after a function of tracenodes has been evaluated and 
+                            thus a tracenodelist is created. 
+                            the method sets the attribute 'active' on 'True' for all tracenode instances, 
+                            which play an active role in the computation of the value of the function.
+                            Meaning those, which were actually needed in order to compute the final function value.
+                            The method runs through the computational graph using depth-first-search.
+    -input:     tracenode which is the result of a function evaluation.
+    -output:    none.
+    '''
+    #using 'depth-first-search':
+    #first, store the result(s) in a list -> easier to handle both cases...
+    if type(result)==tracenode:
+        result = [result]
+    if type(result)==ndarray:
+        result = result.tolist()
+    ##########wrong input exception einfügen!!#############
+    marker  = False
+    storelist = result # the store list is a 'waiting list' for all the nodes, that so far only have an empty contributesto-set..
+    while (len(storelist)>0):#as long as there are nodes where contributesto has not yet been assigned to:
+        node = storelist[0] #take the first node from the top of the list (beginning), this is the current node
+        if node in result:
+            node.contributesto = set([node])
+            if len(node.children)>0:
+                storelist.append(node) # we work with this result node later on
+                del(storelist[0])
+                node = storelist[0] #take next result node
+                if marker == True:
+                    for j in range(len(node.children)):
+                        node.contributesto = node.contributesto | node.children[j].contributesto
+                marker == True
+        else:
+            for i in range(len(node.children)):
+                node.contributesto = node.contributesto | node.children[i].contributesto
+                
+        del(storelist[0]) #the current node can now be deleted from the 'wating list'
+        #now expand and save the parent with the bigger(?) tracernumber as first element of the storelist. we'll deal with this element later..
+        if len(node.parents)>1: #
+            storelist = [node.parents[1]] + storelist  
+        #the parent with the smaller(?) tracernumber is what we concentrate on now.
+        ##if we have not yet reached the input-nodes of the function, node.parents[0] becomes the new current node to deal with in the next while loop:
+        if not(node.operation=='Id'):
+            storelist = [node.parents[0]] + storelist #here, also save the smaller(?) parent in the storelist, but it will be used and deleted right in the beginning of the next while-loop.so this is the current node.
 
         
 
@@ -281,7 +305,7 @@ class tracenode(object):
 def testfunction2(w):
     A = array([[1,0],[0,1]])
     b = dot(A,w)
-    return b[1]
+    return b
     
 l1 = tracenode(2.)
 l2 = tracenode(1.)  
