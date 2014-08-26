@@ -9,19 +9,21 @@ from  scipy       import *
 from  matplotlib.pyplot import *
 
 
-class tracenode(object):  
+class Tracenode(object):  
     '''
     An object of the class represents a node in a computational graph for a function.
     '''
     it = 0 # serves as counter for the instances created..
     ###othernodelist = []
-    #tracenodelist = []  #in this list, all the created instances will be stored
-    storelist = [] #the storelist will be used when setting the attribute 'active' of active tracenode instances to 'True'
+    #Tracenodelist = []  #in this list, all the created instances will be stored
+    storelist = [] #the storelist will be used when setting the attribute 'active' of active Tracenode instances to 'True'
         
         
     def __init__(self, x):
         '''
-        The class tracenode is initialized with a float or integer, the actual value of the node which is created.
+        An object of the class Tracenode is initialized with a float or integer, 
+        the actual value of the node which is created.
+        
         Attributes:
         -self.x:            actual value of the node
         -self.i:            id-number of the node
@@ -38,31 +40,31 @@ class tracenode(object):
             else:
                 raise TypeError('input argument of function needs to be a float.')
         self.x = x 
-        self.i = tracenode.it
-        self.parents = [self] #if the created tracenode is a result of an operation, then self.parents will be set to the corresponding parents ids while the operation is executed..
+        self.i = Tracenode.it
+        self.parents = [self] #if the created Tracenode is a result of an operation, then self.parents will be set to the corresponding parents ids while the operation is executed..
         self.children = []
         self.origin = set([self])
         self.contributesto = set()
-        #####self.origin = [self.i] #if the created tracenode is a result of an operation, then self.origin will be set to the corresponding origin indices while the operation is executed..
+        #####self.origin = [self.i] #if the created Tracenode is a result of an operation, then self.origin will be set to the corresponding origin indices while the operation is executed..
         self.operation = 'Id' #Default value: Identity function        
         self.opconst = None #states, if the operation was performed using a constant
-        tracenode.it = tracenode.it+1
-        #tracenode.tracenodelist.append(self) #stores all the during a function evaluation created objects of type tracenode in a list.
+        Tracenode.it = Tracenode.it+1
+        #Tracenode.Tracenodelist.append(self) #stores all the during a function evaluation created objects of type Tracenode in a list.
 
 
     def __repr__(self):
-        # for reasons of readability, instead of printing the set origin, a list of the tracer numbers of the tracenodes contained in the set origin is printed..
+        # for reasons of readability, instead of printing the set origin, a list of the tracer numbers of the Tracenodes contained in the set origin is printed..
         ortrace = []
         for x in self.origin:
             ortrace.append(x.i)
-        # for reasons of readability, instead of printing the list of tracenodes in parents, a list of the tracer numbers of the tracenodes contained in the list parents is printed.
+        # for reasons of readability, instead of printing the list of Tracenodes in parents, a list of the tracer numbers of the Tracenodes contained in the list parents is printed.
         contrtrace = []
         for x in self.contributesto:
             contrtrace.append(x.i)
         parentstrace  = []
         for x in self.parents:
             parentstrace.append(x.i)
-        # for reasons of readability, instead of printing the list of tracenodes in children, a list of the tracer numbers of the tracenodes contained in the list children is printed.
+        # for reasons of readability, instead of printing the list of Tracenodes in children, a list of the tracer numbers of the Tracenodes contained in the list children is printed.
         childrentrace = []
         for x in self.children:
             childrentrace.append(x.i)
@@ -71,25 +73,25 @@ class tracenode(object):
         
     def __add__(self, other):
         '''
-        method __add__:     overloads the add operator, so it can be used for data of type tracenode. 
-                            works for the addition of data of type tracenodes, 
-                            tracenode and integer, tracenode and float. and vice versa.
-        -input:     tracenode, tracenode/integer/float
-        -output:    tracenode addit, where addit.x contains the value of the addition, 
+        method __add__:     overloads the add operator, so it can be used for data of type Tracenode. 
+                            works for the addition of data of type Tracenodes, 
+                            Tracenode and integer, Tracenode and float. and vice versa.
+        -input:     Tracenode, Tracenode/integer/float
+        -output:    Tracenode addit, where addit.x contains the value of the addition, 
                     addit.origin contains a list of the tracenumbers of the summands,
                     addit.operation states, that addit was created by an addition
         '''
-        if not isinstance(other, tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
+        if not isinstance(other, Tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
             if isinstance(other, int):
                 other = float(other)
             else: 
-                raise TypeError('Addition is only defined for types tracenode and tracenode or float or int.')
-            addit = tracenode(self.x + other)     
+                raise TypeError('Addition is only defined for types Tracenode and Tracenode or float or int.')
+            addit = Tracenode(self.x + other)     
             addit.opconst = other 
             addit.parents = [self] 
             addit.origin = self.origin
         else:
-            addit = tracenode(self.x + other.x)          
+            addit = Tracenode(self.x + other.x)          
             addit.parents = [self, other]
             other.children.append(addit)
             addit.origin = self.origin | other.origin
@@ -107,24 +109,24 @@ class tracenode(object):
     
     def __sub__(self, other):
         '''
-        method __sub__:     overloads the sub operator, so it can be used for data of type tracenode.
-                            works for the subtraction of data of type tracenodes,
-                            tracenode and integer, tracenode and float. and vice versa.
-        -input:     tracenode, tracenode/integer/float
-        -output:    tracenode subtr, where subtr.x contains the value of the subtraction,
+        method __sub__:     overloads the sub operator, so it can be used for data of type Tracenode.
+                            works for the subtraction of data of type Tracenodes,
+                            Tracenode and integer, Tracenode and float. and vice versa.
+        -input:     Tracenode, Tracenode/integer/float
+        -output:    Tracenode subtr, where subtr.x contains the value of the subtraction,
                     subtr.origin contains a list of the tracenumbers of the summands
         '''
-        if not isinstance(other, tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
+        if not isinstance(other, Tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
             if isinstance(other, int):
                 other = float(other)
             else: 
-                raise TypeError('Subtraction is only defined for types tracenode and tracenode or float or int.')
-            subtr = tracenode(self.x - other)     
+                raise TypeError('Subtraction is only defined for types Tracenode and Tracenode or float or int.')
+            subtr = Tracenode(self.x - other)     
             subtr.opconst = other
             subtr.parents = [self]   
             subtr.origin = self.origin
         else:
-            subtr = tracenode(self.x - other.x)     
+            subtr = Tracenode(self.x - other.x)     
             subtr.parents = [self, other]
             other.children.append(subtr.i)
             subtr.origin = self.origin | other.origin
@@ -136,24 +138,24 @@ class tracenode(object):
         
             
     def __mul__(self, other):
-        '''method __mul__:  overloads the mul operator, so it can be used for data of type tracenode.
-                            works for the multiplication of data of type tracenodes,
-                            tracenode and integer, tracenode and float. and vice versa.
-        -input:     tracenode, tracenode/integer/float
-        -output:    tracenode multip, where multip.x contains the resultvalue of the multiplication,
+        '''method __mul__:  overloads the mul operator, so it can be used for data of type Tracenode.
+                            works for the multiplication of data of type Tracenodes,
+                            Tracenode and integer, Tracenode and float. and vice versa.
+        -input:     Tracenode, Tracenode/integer/float
+        -output:    Tracenode multip, where multip.x contains the resultvalue of the multiplication,
                     multip.origin contains a list of the tracenumbers of the factors.
         '''
-        if not isinstance(other, tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
+        if not isinstance(other, Tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
             if isinstance(other, int):
                 other = float(other)
             else: 
-                raise TypeError('Multiplication is only defined for types tracenode and tracenode or float or int.')
-            multip = tracenode(self.x * other)     
+                raise TypeError('Multiplication is only defined for types Tracenode and Tracenode or float or int.')
+            multip = Tracenode(self.x * other)     
             multip.opconst = other
             multip.parents = [self] 
             multip.origin = self.origin
         else:
-            multip = tracenode(self.x + other.x)
+            multip = Tracenode(self.x * other.x)
             multip.parents = [self, other]
             other.children.append(multip.i)        
             multip.origin = self.origin | other.origin
@@ -169,26 +171,26 @@ class tracenode(object):
         
         
     def __div__(self,other):
-        '''method __div__:  overloads the div operator, so it can be used for data of type tracenode.
-                            works for the division of data of type tracenodes,
-                            tracenode and integer, tracenode and float. and vice versa.
-        -input:     tracenode, tracenode/integer/float
-        -output:    tracenode divis, where divis.x contains the resultvalue of the division,
+        '''method __div__:  overloads the div operator, so it can be used for data of type Tracenode.
+                            works for the division of data of type Tracenodes,
+                            Tracenode and integer, Tracenode and float. and vice versa.
+        -input:     Tracenode, Tracenode/integer/float
+        -output:    Tracenode divis, where divis.x contains the resultvalue of the division,
                     divis.origin contains a list of the tracenumbers of the factors.
         '''
-        if not isinstance(other, tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...               
+        if not isinstance(other, Tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...               
             if other ==0:
                 raise ZeroDivisionError('Division by Zero not possible')
             if isinstance(other, int):
                 other = float(other)
             else: 
-                raise TypeError('Division is only defined for types tracenode and tracenode or float or int.')
-            divis = tracenode(self.x / other)     
+                raise TypeError('Division is only defined for types Tracenode and Tracenode or float or int.')
+            divis = Tracenode(self.x / other)     
             divis.opconst = other
             divis.parents = [self]  
             divis.origin = self.origin
         else:
-            divis = tracenode(self.x / other.x)       
+            divis = Tracenode(self.x / other.x)       
             divis.parents = [self, other]
             other.children.append(divis.i)
             divis.origin = self.origin | other.origin
@@ -201,16 +203,16 @@ class tracenode(object):
         
     def __pow__(self, other):
         '''
-        method __pow__: overloadsthe pow operator, so it can be used for data of type tracenode.
-                        data of type tracenodes can be taken to the power of data of type integers.
-        -input:     tracenode, integer
-        -output:    tracenode power, where power.x contains the value of the tracenodevalue to the power of the integer,
-                    power.origin contains a list (with only one element) of the tracenumber of the tracenode, 
+        method __pow__: overloads the pow operator, so it can be used for data of type Tracenode.
+                        data of type Tracenodes can be taken to the power of data of type integers.
+        -input:     Tracenode, integer
+        -output:    Tracenode power, where power.x contains the value of the Tracenodevalue to the power of the integer,
+                    power.origin contains a list (with only one element) of the tracenumber of the Tracenode, 
                     which is taken to the power of the integer..
         '''
         if not isinstance(other, int):
             raise TypeError('function power is only defined for to the power of integers.')
-        power = tracenode(self.x**other)
+        power = Tracenode(self.x**other)
         power.parents = [self]
         power.operation = 'pow'
         self.children.append(power)
@@ -219,34 +221,148 @@ class tracenode(object):
         
         print(power)
         return power
+        
+    
+    def __eq__(self, other):
+        '''
+        method __eq__:  overloads the eq operator, so it can be used to compare data with data of
+                        type Tracenode. If it compares two Tracenodes, it checks if they have the same
+                        tracer number(.i) and value(.x).
+        -input:     Tracenode, other 
+        -output:    returns True, if it compared Tracenodes and they had the same id and value, 
+                    returns False in any other case.
+        '''
+        eq = False
+        if isinstance(other,Tracenode):
+            if self.i == other.i:
+                if self.x == other.x:
+                    eq = True  
+        return eq
+
+
+    def delfromgraph(self):
+        '''
+        metod __del__:  overloads the del operator, so it can be used to delete tracenodes in a graph.
+                        This is done in the following way:
+                        if self has no parents: self.children is set to an empty list.
+                        if self has parents:    self is deleted from the children list of its parents.
+        -input:         Tracenode, which is to be deleted from the graph
+        -output:        None.
+        '''
+        if len(self.parents)==0:
+            self.children==[]
+        else:
+            for j in range(len(self.parents)):
+                for i in range(len(self.parents[j].children)):
+                    if self.parents[j].children[i]==self:
+                        del(self.parents[j].children[i])
+                        break
+        
+        
+        
+        
     
 
 
-class graph (object):
+
+
+
+        
+
+class Graph (object):
+    '''
+    An object of the class Graph represents a computational graph for a given function evaluation. 
+    '''
     def __init__(self, independent, dependent):
+        '''
+        An object of the class Graph is initialized by a list of the independent and 
+        a list of the dependent variables of a function evaluation. 
+        The variables need to be of type Tracenode.
         
-        self.independent = independent
-        self.dependent = dependent
+        Attributes:
+        -self.independent:      List containing the independent variables of the graph.
+        -self.dependent:        List containing the dependent variables of the graph.
+                                If this is a list with an array as only entry(in case the evaluated function has an array as result),
+                                then the array is taken and transformed into a list.
+        '''
+        if not isinstance(independent, list):
+            raise TypeError('The independent variables need to be given in form of a list.')
+        if not isinstance(dependent, list):
+            raise TypeError('The dependent variables need to be given in form of a list.')
+        for i in range(len(independent)):
+            if not isinstance(independent[i], Tracenode):
+                raise TypeError('The independent variables need to be of type Tracenode.')
+        if type(dependent[0])==ndarray:
+            dependent = dependent[0].tolist()
+        for i in range(len(dependent)):
+            if not isinstance(dependent[i], Tracenode):
+                raise TypeError('The dependent variables need to be of type Tracenode or an array of Tracenodes.')
         
-        #def set_contriputesto(self):
+        self.independent = independent 
+        self.dependent = dependent 
+        
+        
+    def __repr__(self):
+        return 'independents: {}\ndependents: {}'.format(self.independent,self.dependent)
+        
+        
+        
+        
+    def optimize(self, depvar):
+        '''
+        method optimize:    optimizes the given graph by deleting all unnecessary computation steps. 
+                            Unnecessary computation steps are those, which do not contribute to the computation of 
+                            a given dependent variable.
+        -input:             depvar: dependent variable or list of dependent variables
+                            whose computational graph is to be optimized.
+        -output:            None. The given graph is optimized.
+        '''
+        if isinstance(depvar, list):
+            if len(depvar)>self.dependent:
+                raise Exception('There are not that many dependent variables in the graph.')
+        else: 
+            if not isinstance(depvar, Tracenode):
+                raise TypeError('depvar needs to be of type Tracenode or a list of Tracenodes.')
+            depvar = [depvar]
+        searchlist = self.independent
+        while len(searchlist)>0:
+            node = searchlist[0]
+            deletenot = False
+            if len(node.children)>0:
+                for j in range(len(node.children)):
+                    alreadyin = False
+                    for a in range(len(searchlist)):
+                        if node.children[j] == searchlist[a]:
+                            alreadyin = True
+                    if alreadyin == False:
+                        searchlist.append(node.children[j])
+            for i in range(len(depvar)):
+                if depvar[i] in node.contributesto:
+                    deletenot = True
+            if deletenot == False:
+                node.delfromgraph()
+            del(searchlist[0])
+        
+        
+        
+                                
+        
             
             
-            
-    
 def set_contributesto(result):
     '''
-    method setallactives:   method can be run after a function of tracenodes has been evaluated and 
-                            thus a tracenodelist is created. 
-                            the method sets the attribute 'active' on 'True' for all tracenode instances, 
+    method setallactives:   method can be run after a function of Tracenodes has been evaluated and 
+                            thus a Tracenodelist is created. 
+                            the method sets the attribute 'active' on 'True' for all Tracenode instances, 
                             which play an active role in the computation of the value of the function.
                             Meaning those, which were actually needed in order to compute the final function value.
                             The method runs through the computational graph using depth-first-search.
-    -input:     tracenode which is the result of a function evaluation.
+    -input:     Tracenode which is the result of a function evaluation.
     -output:    none.
     '''
     #using 'depth-first-search':
     #first, store the result(s) in a list -> easier to handle both cases...
-    if type(result)==tracenode:
+    if type(result)==Tracenode:
         result = [result]
     if type(result)==ndarray:
         result = result.tolist()
@@ -277,8 +393,9 @@ def set_contributesto(result):
         ##if we have not yet reached the input-nodes of the function, node.parents[0] becomes the new current node to deal with in the next while loop:
         if not(node.operation=='Id'):
             storelist = [node.parents[0]] + storelist #here, also save the smaller(?) parent in the storelist, but it will be used and deleted right in the beginning of the next while-loop.so this is the current node.
+    
+    
 
-        
 
             
         
@@ -292,11 +409,11 @@ def set_contributesto(result):
 #################################################################################
 #################################################################################
 #################################################################################        
-#u = tracenode(1.)
-
-#v = tracenode(2.)        
-
-
+#u = Tracenode(1.)
+#
+#v = Tracenode(2.)        
+#
+#
 #def testfunction3(u,v):
 #    return u+v+1
 #p = testfunction3(u,v)
@@ -307,49 +424,50 @@ def testfunction2(w):
     b = dot(A,w)
     return b
     
-l1 = tracenode(2.)
-l2 = tracenode(1.)  
+l1 = Tracenode(2.)
+l2 = Tracenode(1.)  
 l3 = testfunction2(array([l1,l2]))
+
 ##print('The result is [{},{}].'.format(l3[0].x,l3[1].x))
-    
+#    
 #def testfunction4(u,v):
 #    return 2*u*v*2*2*3
 #p2 = testfunction4(u,v)
 #print('the result is {} and has tracer number {}.'.format(p2.x,p2.i))
-    
+#    
 #def testfunction5(u,v):
 #    return u-v
 #p5 = testfunction5(u,v)
 #print('the result is {} and has tracer number {}.'.format(p5.x,p5.i))
-    
+#    
 #def testfunction6(u,v):
 #    return v**2-1
 #p6 = testfunction6(u,v)
 #print('the result is {} and has tracer number {}.'.format(p6.x,p6.i))
-
-    
+#
+#    
 #def testfunction7(w):
 #    A = array([[1,0],[0,1]])
 #    B = array([[1,0],[0,1]])
 #    return dot(dot(A,B),w)
-    
+#    
 #p7 = testfunction7(array([l1,l2]))
 #print('The result is [{},{}].'.format(p7[0].x,p7[1].x))
-
+#
 #def testfunction8():
-#    q = tracenode(0.)
-#    r = tracenode(1.)
-#    s = tracenode(2.)
-#    t = tracenode(3.)
+#    q = Tracenode(0.)
+#    r = Tracenode(1.)
+#    s = Tracenode(2.)
+#    t = Tracenode(3.)
 #
 #    A = array([[r,s],[q,r]])
 #    B = array([[t,r],[r,s]])
 #    print(dot(A,B))
 #    return dot(A,B)
-
+#
 #p8 = testfunction8()
 #print('The result is \n[[{},{}],\n [{},{}]].'.format(p8[0][0].x,p8[0][1].x,p8[1][0].x,p8[1][1].x))
-
-
+#
+#
 
     
