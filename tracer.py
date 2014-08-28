@@ -11,7 +11,7 @@ from  matplotlib.pyplot import *
 
 class Tracenode(object):  
     '''
-    An object of the class represents a node in a computational graph for a function.
+    An instance of the class represents a node in a computational graph for a function.
     '''
     it = 0 # serves as counter for the instances created..
     ###othernodelist = []
@@ -249,14 +249,14 @@ class Tracenode(object):
         -input:         Tracenode, which is to be deleted from the graph
         -output:        None.
         '''
-        if len(self.parents)==0:
+        if (self.parents==self and self.operation=='Id'):
             self.children==[]
         else:
             for j in range(len(self.parents)):
                 for i in range(len(self.parents[j].children)):
                     if self.parents[j].children[i]==self:
                         del(self.parents[j].children[i])
-                        break
+                        break #to avoid an index error, we break from the for-loop, when a child has been deleted from the children list.
         
         
         
@@ -271,20 +271,22 @@ class Tracenode(object):
 
 class Graph (object):
     '''
-    An object of the class Graph represents a computational graph for a given function evaluation. 
+    An instance of the class Graph represents a computational graph for a given function evaluation. 
     '''
     def __init__(self, independent, dependent):
         '''
-        An object of the class Graph is initialized by a list of the independent and 
-        a list of the dependent variables of a function evaluation. 
+        An object of the class Graph is initialized by a list or array of the independent and 
+        a list or array of the dependent variables of a function evaluation. 
         The variables need to be of type Tracenode.
         
         Attributes:
         -self.independent:      List containing the independent variables of the graph.
         -self.dependent:        List containing the dependent variables of the graph.
-                                If this is a list with an array as only entry(in case the evaluated function has an array as result),
-                                then the array is taken and transformed into a list.
         '''
+        if type(dependent)==ndarray:
+            dependent = dependent.tolist()
+        if type(independent)==ndarray:
+            independent = independent.tolist()
         if not isinstance(independent, list):
             raise TypeError('The independent variables need to be given in form of a list.')
         if not isinstance(dependent, list):
@@ -292,18 +294,31 @@ class Graph (object):
         for i in range(len(independent)):
             if not isinstance(independent[i], Tracenode):
                 raise TypeError('The independent variables need to be of type Tracenode.')
-        if type(dependent[0])==ndarray:
-            dependent = dependent[0].tolist()
         for i in range(len(dependent)):
             if not isinstance(dependent[i], Tracenode):
                 raise TypeError('The dependent variables need to be of type Tracenode or an array of Tracenodes.')
         
         self.independent = independent 
-        self.dependent = dependent 
+        set_contributesto(dependent)
+        self.dependent = dependent
+
         
         
     def __repr__(self):
-        return 'independents: {}\ndependents: {}'.format(self.independent,self.dependent)
+        printlist = self.independent
+        while len(printlist)>0:
+            print(printlist[0])
+
+            for i in range(len(printlist[0].children)):
+                marker2 = False
+                for j in range(len(printlist)):
+                    if printlist[0].children[i] == printlist[j]:
+                        marker2 = True
+                if marker2 == False:
+                    printlist = printlist + [printlist[0].children[i]]
+            del(printlist[0])
+
+        return '\nindependents: {}\ndependents: {}'.format(self.independent,self.dependent)
         
         
         
@@ -313,21 +328,27 @@ class Graph (object):
         method optimize:    optimizes the given graph by deleting all unnecessary computation steps. 
                             Unnecessary computation steps are those, which do not contribute to the computation of 
                             a given dependent variable.
-        -input:             depvar: dependent variable or list of dependent variables
+        -input:             depvar: dependent variable or list/array of dependent variables
                             whose computational graph is to be optimized.
         -output:            None. The given graph is optimized.
         '''
-        if isinstance(depvar, list):
+        if type(depvar)==ndarray:
+            depvar = depvar.tolist()
+        if type(depvar)==list:
             if len(depvar)>self.dependent:
                 raise Exception('There are not that many dependent variables in the graph.')
+            for i in range(len(depvar)):
+                if not isinstance(depvar[i], Tracenode):
+                    raise Exception('The dependent variable(s) whose computation is to be optimized need to be of type Tracenode.')
         else: 
             if not isinstance(depvar, Tracenode):
                 raise TypeError('depvar needs to be of type Tracenode or a list of Tracenodes.')
             depvar = [depvar]
-        searchlist = self.independent
+        searchlist = []
+        for i in range(len(self.independent)):
+            searchlist = searchlist + [self.independent[i]]
         while len(searchlist)>0:
             node = searchlist[0]
-            deletenot = False
             if len(node.children)>0:
                 for j in range(len(node.children)):
                     alreadyin = False
@@ -336,13 +357,11 @@ class Graph (object):
                             alreadyin = True
                     if alreadyin == False:
                         searchlist.append(node.children[j])
-            for i in range(len(depvar)):
-                if depvar[i] in node.contributesto:
-                    deletenot = True
-            if deletenot == False:
-                node.delfromgraph()
+            node.contributesto = node.contributesto & set(depvar)
+            if len(node.contributesto)==0:
+                node.delfromgraph()              
             del(searchlist[0])
-        
+        self.dependent = depvar
         
         
                                 
@@ -351,11 +370,9 @@ class Graph (object):
             
 def set_contributesto(result):
     '''
-    method setallactives:   method can be run after a function of Tracenodes has been evaluated and 
+    method set_contributesto:   method can be run after a function of Tracenodes has been evaluated and 
                             thus a Tracenodelist is created. 
-                            the method sets the attribute 'active' on 'True' for all Tracenode instances, 
-                            which play an active role in the computation of the value of the function.
-                            Meaning those, which were actually needed in order to compute the final function value.
+                            the method sets the attribute 'contributesto' for all tracenodes of the computation.
                             The method runs through the computational graph using depth-first-search.
     -input:     Tracenode which is the result of a function evaluation.
     -output:    none.
@@ -368,9 +385,11 @@ def set_contributesto(result):
         result = result.tolist()
     ##########wrong input exception einfügen!!#############
     marker  = False
-    storelist = result # the store list is a 'waiting list' for all the nodes, that so far only have an empty contributesto-set..
+    storelist=[]
+    for i in range(len(result)):
+        storelist = storelist + [result[i]] # the store list is a 'waiting list' for all the nodes, that so far only have an empty contributesto-set..
     while (len(storelist)>0):#as long as there are nodes where contributesto has not yet been assigned to:
-        node = storelist[0] #take the first node from the top of the list (beginning), this is the current node
+        node = storelist[0] #take the first node from the top of the list (beginning), this is the current node       
         if node in result:
             node.contributesto = set([node])
             if len(node.children)>0:

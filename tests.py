@@ -10,11 +10,11 @@ from  matplotlib.pyplot import *
 
 
 
-tracenode.it = 0
-tracenode.othernodelist = []
-tracenode.tracenodelist = []
-u = tracenode(1.)
-v = tracenode(2.) 
+Tracenode.it = 0
+Tracenode.othernodelist = []
+Tracenode.Tracenodelist = []
+u = Tracenode(1.)
+v = Tracenode(2.) 
 
 def testfunction(u,v):
     return 1+u+v+1
@@ -58,24 +58,24 @@ def test_identity():
     assert allclose(result.i, expected2),'Sth went wrong with the tracing in __add__'
     
     
-    tracenode.it = 0
-    tracenode.othernodelist = []
-    tracenode.tracenodelist = []
-    l1 = tracenode(2.)
-    l2 = tracenode(1.)
+    Tracenode.it = 0
+    Tracenode.othernodelist = []
+    Tracenode.Tracenodelist = []
+    l1 = Tracenode(2.)
+    l2 = Tracenode(1.)
     l3 = testfunction2(array([l1,l2]))
 ###    print(l3)
-###    print(tracenode.tracenodelist)
+###    print(Tracenode.Tracenodelist)
     result = array([l3[0].x,l3[1].x]) 
     expected = array([2,1])
     assert allclose(result,expected),'Sth went wrong with __add__ or __mul__'
     
     
-    tracenode.it = 0
-    tracenode.othernodelist = []
-    tracenode.tracenodelist = []
-    u1 = tracenode(1.)
-    v1 = tracenode(2.) 
+    Tracenode.it = 0
+    Tracenode.othernodelist = []
+    Tracenode.Tracenodelist = []
+    u1 = Tracenode(1.)
+    v1 = Tracenode(2.) 
     p2 = testfunction4(u1,v1)
     result = p2.x
     expected = 48.
@@ -86,22 +86,22 @@ def test_identity():
     assert allclose(result2,expected2),'Sth went wrong with the tracing in __mul__ '
 
 
-    tracenode.it = 0
-    tracenode.othernodelist = []
-    tracenode.tracenodelist = []
-    u1 = tracenode(1.)
-    v1 = tracenode(2.)
+    Tracenode.it = 0
+    Tracenode.othernodelist = []
+    Tracenode.Tracenodelist = []
+    u1 = Tracenode(1.)
+    v1 = Tracenode(2.)
     result = testfunction5(u1,v1)
     expected = -1
     assert allclose(result.x,expected), ' Sth went wrong with the computation in __sub__'
     expected2  = 2
     assert allclose(result.i, expected2), 'Sth went wrong with the tracing in __sub__'
     
-    tracenode.it = 0
-    tracenode.othernodelist = []
-    tracenode.tracenodelist = []
-    u1 = tracenode(1.)
-    v1 = tracenode(2.)
+    Tracenode.it = 0
+    Tracenode.othernodelist = []
+    Tracenode.Tracenodelist = []
+    u1 = Tracenode(1.)
+    v1 = Tracenode(2.)
     result = testfunction6(u1,v1)
     expected = 3
     assert allclose(result.x,expected), ' Sth went wrong with the computation in __pow__or __sub__'
@@ -110,19 +110,19 @@ def test_identity():
 
 
 
-    tracenode.it = 0
-    tracenode.othernodelist = []
-    tracenode.tracenodelist = []    
-    l1 = tracenode(2.)
-    l2 = tracenode(1.)
+    Tracenode.it = 0
+    Tracenode.othernodelist = []
+    Tracenode.Tracenodelist = []    
+    l1 = Tracenode(2.)
+    l2 = Tracenode(1.)
     result = testfunction7(array([l1,l2]))
     expected = array([l1.x,l2.x])
     assert allclose(array([result[0].x,result[1].x]),expected), 'Sth went wrong with __add__ or __mult__'
 
-#    tracenode.it = 0
- #   tracenode.othernodelist = []
-  #  tracenode.tracenodelist = []
-#    w = tracenode(1)
+#    Tracenode.it = 0
+ #   Tracenode.othernodelist = []
+  #  Tracenode.Tracenodelist = []
+#    w = Tracenode(1)
  #   result = testfunction8(w)
   #  expected = array([[5,5],[1,2]])
 #    assert allclose(array([[result[0][0].x,result[0][1].x],[result[1][0].x, result[1][1].x]]),expected), 'Sth went wrong with __add__ or __mult__'
@@ -136,9 +136,9 @@ def test_identity():
     #assert allclose(maximum,expected2), 'Sth went wrong with the tracing..'
 
 
-    tracenode.it = 0
-    tracenode.tracenodelist = []
-    x = array([tracenode(1),tracenode(1)])
+    Tracenode.it = 0
+    Tracenode.Tracenodelist = []
+    x = array([Tracenode(1),Tracenode(1)])
     result = testfunction9(x)
 ###    print(result)
     expected = array([2,1,1])
@@ -151,9 +151,9 @@ def test_identity():
 
 
 def test_badinput():
-    tracenode.it = 0
+    Tracenode.it = 0
     try:
-        tracenode('a')
+        Tracenode('a')
     except TypeError:
         pass
     else:
