@@ -48,9 +48,10 @@ class Tracenode(object):
         #####self.origin = [self.i] #if the created Tracenode is a result of an operation, then self.origin will be set to the corresponding origin indices while the operation is executed..
         self.operation = 'Id' #Default value: Identity function        
         self.opconst = None #states, if the operation was performed using a constant
+        self.visited = False
         Tracenode.it = Tracenode.it+1
         #Tracenode.Tracenodelist.append(self) #stores all the during a function evaluation created objects of type Tracenode in a list.
-
+        
 
     def __repr__(self):
         # for reasons of readability, instead of printing the set origin, a list of the tracer numbers of the Tracenodes contained in the set origin is printed..
@@ -249,8 +250,8 @@ class Tracenode(object):
         -input:         Tracenode, which is to be deleted from the graph
         -output:        None.
         '''
-        if (self.parents==self and self.operation=='Id'):
-            self.children==[]
+        if (self.parents==[self] and self.operation=='Id'):
+            self.children = []
         else:
             for j in range(len(self.parents)):
                 for i in range(len(self.parents[j].children)):
@@ -347,24 +348,102 @@ class Graph (object):
         searchlist = []
         for i in range(len(self.independent)):
             searchlist = searchlist + [self.independent[i]]
+            self.independent[i].visited = True
         while len(searchlist)>0:
             node = searchlist[0]
             if len(node.children)>0:
                 for j in range(len(node.children)):
-                    alreadyin = False
-                    for a in range(len(searchlist)):
-                        if node.children[j] == searchlist[a]:
-                            alreadyin = True
-                    if alreadyin == False:
+                   # alreadyin = False
+                   # for a in range(len(searchlist)):
+                    #    if node.children[j] == searchlist[a]:
+                    #        alreadyin = True
+                    #if alreadyin == False:
+                    if node.children[j].visited == False:
                         searchlist.append(node.children[j])
+                        node.children[j].visited = True
             node.contributesto = node.contributesto & set(depvar)
             if len(node.contributesto)==0:
                 node.delfromgraph()              
             del(searchlist[0])
         self.dependent = depvar
+        setvisitedfalse(self.independent)
         
         
-                                
+    
+    def evaluate(self, indepval):
+        '''
+        method eval:        with this method, a function whose graph is given, can be evaluated.
+                            the program runs through the graph with breadth-first-search.
+        -input:         list of new values for the independent variables or 
+                        list of independent variables (type tracenode) with the new values
+        -output:        dependent variables (self.dependent) with the new function values as attribute .x
+        ''' 
+        if not isinstance(indepval, list):
+            raise TypeError('The independent variables need to be given in form of a list.')
+        if len(indepval) != len(self.independent):
+            raise Exception('There are {} independent variables!'.format(len(self.independent)))
+        if type(indepval[0]) == float or type(indepval[0]) == int:
+            for i in range(len(self.independent)):
+                self.independent[i].x = indepval[i]
+        else:
+            if not isinstance(indepval[0], Tracenode):
+                raise TypeError('the independent variables need to be given in form of a list of integers/floats or Tracenodes!')
+            for j in range(len(self.independent)):
+                indepval[j].i = self.independent[j].i
+                indepval[j].contributesto = self.independent[j].contributesto
+                indepval[j].children = self.independent[j].children
+            self.independent = indepval
+        
+        storelist = []
+        for i in range(len(self.independent)):
+            self.independent[i].visited = True
+            for j in range(len(self.independent[i].children)):
+                if self.independent[i].children[j].visited == False:
+                    print('yes')##wird hier nicht angelaufen...warum???
+                    storelist = storelist + [self.independent[i].children[j]]
+                    self.independent[i].children[j].visited = True
+        while len(storelist)>0:
+            node = storelist[0]
+            for j in range(len(node.children)):
+                if node.children[j].visited == False:
+                    storelist = storelist + [node.children[j]]
+                    node.children[j].visited = True
+            if len(node.parents)==2:
+                if node.operation == 'add':
+                    node.x = node.parents[0].x + node.parents[1].x
+                elif node.operation == 'sub':
+                    node.x = node.parents[0].x - node.parents[1].x
+                elif node.operation == 'div':
+                    node.x = node.parents[0].x / node.parents[1].x
+                elif node.operation =='mul':
+                    node.x = node.parents[0].x * node.parents[1].x
+            else:
+                if node.operation =='add':
+                    node.x = node.parents[0].x + node.opconst
+                elif node.operation =='sub':
+                    node.x = node.parents[0].x - node.opconst
+                elif node.operation == 'mul':
+                    node.x = node.parents[0].x * node.opconst
+                elif node.operation =='div':
+                    node.x = node.parents[0].x / node.opconst
+                elif node.operation =='pow':
+                    node.x = node.parents[0].x ** node.opconst
+            del(storelist[0])
+        setvisitedfalse(self.independent)
+        return self.dependent
+            
+            
+
+def setvisitedfalse(nodelist):
+    '''
+    method setvisitedfalse: sets the attribute visited on False for all nodes in the Graph 
+                            which emerges from the nodes in nodelist.
+    '''
+    storelist = nodelist
+    while len(storelist)>0:
+        storelist = storelist + storelist[0].children
+        storelist[0].visited = False
+        del(storelist[0])
         
             
             
@@ -418,12 +497,7 @@ def set_contributesto(result):
 
             
         
-        
-        
-        
-        
-        
-        
+     
         
 #################################################################################
 #################################################################################
@@ -486,7 +560,3 @@ l3 = testfunction2(array([l1,l2]))
 #
 #p8 = testfunction8()
 #print('The result is \n[[{},{}],\n [{},{}]].'.format(p8[0][0].x,p8[0][1].x,p8[1][0].x,p8[1][1].x))
-#
-#
-
-    
