@@ -393,14 +393,16 @@ class Graph (object):
                 indepval[j].contributesto = self.independent[j].contributesto
                 indepval[j].children = self.independent[j].children
             self.independent = indepval
-        
         storelist = []
         for i in range(len(self.independent)):
             self.independent[i].visited = True
             for j in range(len(self.independent[i].children)):
                 if self.independent[i].children[j].visited == False:
-                    print('yes')##wird hier nicht angelaufen...warum???
                     storelist = storelist + [self.independent[i].children[j]]
+                    if self.independent[i].children[j].parents[0].i == self.independent[i].i: # this if/else-statement makes sure, that the children are computed with the new parents..
+                        self.independent[i].children[j].parents[0] = self.independent[i]
+                    else: 
+                        self.independent[i].children[j].parents[1] = self.independent[i]
                     self.independent[i].children[j].visited = True
         while len(storelist)>0:
             node = storelist[0]
@@ -410,7 +412,7 @@ class Graph (object):
                     node.children[j].visited = True
             if len(node.parents)==2:
                 if node.operation == 'add':
-                    node.x = node.parents[0].x + node.parents[1].x
+                    node.x = node.parents[0].x + node.parents[1].x   
                 elif node.operation == 'sub':
                     node.x = node.parents[0].x - node.parents[1].x
                 elif node.operation == 'div':
