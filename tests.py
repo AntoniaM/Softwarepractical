@@ -59,21 +59,54 @@ def test_identity():
     
     
     Tracenode.it = 0
-    Tracenode.othernodelist = []
-    Tracenode.Tracenodelist = []
     l1 = Tracenode(2.)
     l2 = Tracenode(1.)
     l3 = testfunction2(array([l1,l2]))
-###    print(l3)
-###    print(Tracenode.Tracenodelist)
     result = array([l3[0].x,l3[1].x]) 
     expected = array([2,1])
     assert allclose(result,expected),'Sth went wrong with __add__ or __mul__'
     
+    #test function set_contributesto
+    g = Graph([l1,l2],l3)
+    result = g.dependent[0].contributesto
+    expected = set([g.dependent[0]])
+    if result != expected:
+        raise Exception('Sth went wrong with the set_contributes method or graph of testfunction2')
+        
+    result = g.dependent[0].parents[0].contributesto
+    if len(result & set([g.dependent[0]])) == 0:
+        raise Exception('Sth went wrong with the set_contributes method or graph for testfunction2')
+        
+    #test function setvisitedfalse:
+    l4 = Tracenode(3.)
+    l4.visited = True
+    setvisitedfalse([l4])
+    if l4.visited == True:
+        raise Exception('Method setvisitedfalse did not work the way it should..')
+    
+    
+    #test function evaluate:
+    result = g.evaluate([0,30])
+    result[0] = result[0].x
+    result[1] = result[1].x
+    expected  = array([0,30])
+    if result[0] != expected[0]:
+        raise Exception("Graph method 'evaluate' did not work the way it should..")
+    if result[1] != expected[1]:
+        raise Exception("Graph method 'evaluate' did not work the way it should..")
+        
+    l5 = array([Tracenode(10.),Tracenode(20.)])
+    result = testfunction7(l5)
+    if result[0].x != 10.:
+        raise Exception("Graph method 'evaluate' did not work the way it should..")
+    if result[1].x != 20.:
+        raise Exception("Graph method 'evaluate' did not work the way it should..")
+        
+        
+
+    
     
     Tracenode.it = 0
-    Tracenode.othernodelist = []
-    Tracenode.Tracenodelist = []
     u1 = Tracenode(1.)
     v1 = Tracenode(2.) 
     p2 = testfunction4(u1,v1)
@@ -87,8 +120,6 @@ def test_identity():
 
 
     Tracenode.it = 0
-    Tracenode.othernodelist = []
-    Tracenode.Tracenodelist = []
     u1 = Tracenode(1.)
     v1 = Tracenode(2.)
     result = testfunction5(u1,v1)
@@ -98,8 +129,6 @@ def test_identity():
     assert allclose(result.i, expected2), 'Sth went wrong with the tracing in __sub__'
     
     Tracenode.it = 0
-    Tracenode.othernodelist = []
-    Tracenode.Tracenodelist = []
     u1 = Tracenode(1.)
     v1 = Tracenode(2.)
     result = testfunction6(u1,v1)
@@ -111,8 +140,6 @@ def test_identity():
 
 
     Tracenode.it = 0
-    Tracenode.othernodelist = []
-    Tracenode.Tracenodelist = []    
     l1 = Tracenode(2.)
     l2 = Tracenode(1.)
     result = testfunction7(array([l1,l2]))

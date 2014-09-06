@@ -214,7 +214,7 @@ class Tracenode(object):
         if not isinstance(other, int):
             raise TypeError('function power is only defined for to the power of integers.')
         power = Tracenode(self.x**other)
-        power.parents = [self]
+        #power.parents = [self]
         power.operation = 'pow'
         self.children.append(power)
         power.opconst = other
@@ -222,6 +222,43 @@ class Tracenode(object):
         
         print(power)
         return power
+        
+    def sin(self):
+        '''
+        method __sin__: overloaded the sin operator, so it can be used for data of type Tracenode.
+        -input:     Tracenode self
+        -outbput:   Tracendoe(sin(self.x))
+        '''
+        sinu = Tracenode(sin(self.x))
+        sinu.operation = 'sin'
+        self.children.append(sinu)
+        sinu.origin = self.origin
+        print(sinu)
+        return sinu
+        
+    def cos(self):
+        '''method __cos__: overloaded the cos operator, so it can be used for data of type Tracenode.
+        -input:     Tracenode self
+        -output:    Tracenode(cos(self.x))
+        '''
+        cosi = Tracenode(cos(self.x))
+        cosi.operation = 'cos'
+        self.children.append(cosi)
+        cosi.origin = self.origin
+        print(cosi)
+        return cosi
+        
+    def exp(self):
+        '''method __exp__:  overloaded the exp operator, so it can be used for data of type Tracenode.
+        -input:     Tracenode self
+        -output:    Tracenode(exp(self.x))
+        '''
+        expo = Tracenode(exp(self.x))
+        expo.operation = 'exp'
+        self.children.append(expo)
+        expo.origin = self.origin
+        print(expo) 
+        return expo
         
     
     def __eq__(self, other):
@@ -270,7 +307,7 @@ class Tracenode(object):
 
         
 
-class Graph (object):
+class Graph(object):
     '''
     An instance of the class Graph represents a computational graph for a given function evaluation. 
     '''
@@ -430,17 +467,101 @@ class Graph (object):
                     node.x = node.parents[0].x / node.opconst
                 elif node.operation =='pow':
                     node.x = node.parents[0].x ** node.opconst
+                elif node.operation == 'sin':
+                    node.x = sin(node.parents[0].x)
+                elif node.operation == 'cos':
+                    node.x = cos(node.parents[0].x)
+                elif node.opareation == 'exp':
+                    node.x = exp(node.parents[0].x)
             del(storelist[0])
         setvisitedfalse(self.independent)
         return self.dependent
             
             
-
+            
+    def write_c_code(self, filename):
+        '''
+        method write_c_code:        this method creates a c-file called filename.c. 
+                                    This file contains the c code for the function evaluation.
+                                    The c code is written while going through the graph as is done in the graph method evaluate.
+                            
+        -input:         string '... .c': name of the file, which should contain the c code of the function evaluation.
+        -output:        None.
+        ''' 
+        if not type(filename) == str : 
+            raise TypeError('Input filename should be a string!')
+        if not filename[-1] =='c':
+            raise Exception("The filename should be a string that looks like 'name.c'!")
+        if not filename[-2] =='.':
+            raise Exception("The filename should be a string that looks like 'name.c'!")
+            
+        storelist = []
+        size = 0
+        #s = 'void fun( int nx, double *x, int ny, double *y)\n{\n'
+        s = 'void fun(double *x, double *y)\n{\n'
+        ##fehlermeldung für c code einbauen: falls nx bzw. len(self.independent) nicht size(x) entspricht. und gleiches für ny bzw. len(self.dependent) und y.....
+        for j in range(len(self.dependent)):
+            if self.dependent[j].i > size:
+                size = self.dependent[j].i
+        size = size +1
+        s = s + '   double v[{}];\n'.format(size)
+        for i in range(len(self.independent)):
+            self.independent[i].visited = True
+            s = s + '   v[{}] = x[{}];\n'.format(i, self.independent[i].i)
+            for j in range(len(self.independent[i].children)):
+                if self.independent[i].children[j].visited == False:
+                    storelist = storelist + [self.independent[i].children[j]]
+                    self.independent[i].children[j].visited = True
+        while len(storelist)>0:
+            node = storelist[0]
+            for j in range(len(node.children)):
+                if node.children[j].visited == False:
+                    storelist = storelist + [node.children[j]]
+                    node.children[j].visited = True
+            if len(node.parents)==2:
+                if node.operation == 'add':
+                    s = s + '   v[{}] = v[{}] + v[{}];\n'.format(node.i,node.parents[0].i,node.parents[1].i)  
+                elif node.operation == 'sub':
+                    s = s + '   v[{}] = v[{}] - v[{}];\n'.format(node.i,node.parents[0].i, node.parents[1].i)
+                elif node.operation == 'div':
+                    s = s + '   v[{}] = v[{}] / v[{}];\n'.format(node.i,node.parents[0].i, node.parents[1].i)
+                elif node.operation =='mul':
+                    s = s + '   v[{}] = v[{}] * v[{}];\n'.format(node.i,node.parents[0].i, node.parents[1].i)
+            else:
+                if node.operation =='add':
+                    s = s + '   v[{}] = v[{}] + {};\n'.format(node.i,node.parents[0].i, node.opconst)
+                elif node.operation =='sub':
+                    s = s + '   v[{}] = v[{}] - {};\n'.format(node.i,node.parents[0].i, node.opconst)
+                elif node.operation == 'mul':
+                    s = s + '   v[{}] = v[{}] * {};\n'.format(node.i,node.parents[0].i, node.opconst)
+                elif node.operation =='div':
+                    s = s + '   v[{}] = v[{}] / {};\n'.format(node.i,node.parents[0].i, node.opconst)
+                elif node.operation =='pow':
+                    s = s + '   v[{}] = v[{}] ** {};\n'.format(node.i,node.parents[0].i, node.opconst)
+                elif node.operation == 'sin':
+                    s = s + '   v[{}] = sin(v[{}]);\n'.format(node.i,node.parents[0].i)
+                elif node.operation == 'cos':
+                    s = s + '   v[{}] = cos(v[{}]);\n'.format(node.i,node.parents[0].i)
+                elif node.opareation == 'exp':
+                    s = s + '   v[{}] = exp(v[{}]);\n'.format(node.i,node.parents[0].i)
+            del(storelist[0])
+        for j in range(len(self.dependent)):
+            s = s + '   y[{}] = v[{}];\n'.format(j,self.dependent[j].i)
+        s = s + '   return y;\n}'
+        setvisitedfalse(self.independent)
+        print(s)
+        with open(filename, 'w') as cfile:
+            cfile.write(s)
+            
+            
 def setvisitedfalse(nodelist):
     '''
     method setvisitedfalse: sets the attribute visited on False for all nodes in the Graph 
                             which emerges from the nodes in nodelist.
+    -input: list of nodes
     '''
+    if not isinstance(nodelist,list):
+        raise TypeError(' input for setvisitedfalse needs to be of type list')
     storelist = nodelist
     while len(storelist)>0:
         storelist = storelist + storelist[0].children
@@ -455,17 +576,22 @@ def set_contributesto(result):
                             thus a Tracenodelist is created. 
                             the method sets the attribute 'contributesto' for all tracenodes of the computation.
                             The method runs through the computational graph using depth-first-search.
-    -input:     Tracenode which is the result of a function evaluation.
-    -output:    none.
+    -input:     Tracenode or array of Tracenodes which is the result of a function evaluation.
+    -output:    None.
     '''
+    if not isinstance(result,Tracenode):
+        if not type(result) == ndarray:
+            raise TypeError('Input should be a Tracenode or array of Tracenodes.')
+        else:
+            if not isinstance(result[0],Tracenode):
+                raise TypeError('Input should be a Tracenode or array of Tracenodes.')
     #using 'depth-first-search':
     #first, store the result(s) in a list -> easier to handle both cases...
     if type(result)==Tracenode:
         result = [result]
     if type(result)==ndarray:
         result = result.tolist()
-    ##########wrong input exception einfügen!!#############
-    marker  = False
+    marker  = False # this marker states, if a node which is a result node, but at the same time has children, has been put to the end of storelist in order to postpone the setting of "contributesto"
     storelist=[]
     for i in range(len(result)):
         storelist = storelist + [result[i]] # the store list is a 'waiting list' for all the nodes, that so far only have an empty contributesto-set..
@@ -480,7 +606,7 @@ def set_contributesto(result):
                 if marker == True:
                     for j in range(len(node.children)):
                         node.contributesto = node.contributesto | node.children[j].contributesto
-                marker == True
+                marker = True
         else:
             for i in range(len(node.children)):
                 node.contributesto = node.contributesto | node.children[i].contributesto
