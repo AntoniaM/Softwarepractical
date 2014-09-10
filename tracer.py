@@ -337,7 +337,7 @@ class Graph(object):
                 raise TypeError('The dependent variables need to be of type Tracenode or an array of Tracenodes.')
         
         self.independent = independent 
-        set_contributesto(dependent)
+        set_contributesto(array(dependent))
         self.dependent = dependent
 
         
@@ -498,7 +498,7 @@ class Graph(object):
         storelist = []
         size = 0
         #s = 'void fun( int nx, double *x, int ny, double *y)\n{\n'
-        s = 'void fun(double *x, double *y)\n{\n'
+        s = 'void fun(double x[], double y[])\n{\n'
         ##fehlermeldung für c code einbauen: falls nx bzw. len(self.independent) nicht size(x) entspricht. und gleiches für ny bzw. len(self.dependent) und y.....
         for j in range(len(self.dependent)):
             if self.dependent[j].i > size:
@@ -547,7 +547,7 @@ class Graph(object):
             del(storelist[0])
         for j in range(len(self.dependent)):
             s = s + '   y[{}] = v[{}];\n'.format(j,self.dependent[j].i)
-        s = s + '   return y;\n}'
+        s = s + '}'
         setvisitedfalse(self.independent)
         print(s)
         with open(filename, 'w') as cfile:
@@ -642,7 +642,7 @@ def set_contributesto(result):
     
 def testfunction2(w):
     A = array([[1,0],[0,1]])
-    b = dot(A,w)
+    b = 2*dot(A,w)
     return b
     
 l1 = Tracenode(2.)
