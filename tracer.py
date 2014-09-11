@@ -14,16 +14,13 @@ class Tracenode(object):
     An instance of the class represents a node in a computational graph for a function.
     '''
     it = 0 # serves as counter for the instances created..
-    ###othernodelist = []
     #Tracenodelist = []  #in this list, all the created instances will be stored
     storelist = [] #the storelist will be used when setting the attribute 'active' of active Tracenode instances to 'True'
-        
         
     def __init__(self, x):
         '''
         An object of the class Tracenode is initialized with a float or integer, 
         the actual value of the node which is created.
-        
         Attributes:
         -self.x:            actual value of the node
         -self.i:            id-number of the node
@@ -33,6 +30,8 @@ class Tracenode(object):
         -self.children:     list containing the nodes for whose computation the node self is needed for
         -self.operation:    states the operation self.x arises out of     
         -self.opconst:      states if the operation was performed using a constant (when self.parents is a list of length 1)
+        -self.depth:        gives the depth of the node in the Graph
+        -self.visited:      when the node is in a graph, the attribute visited can be used to memorize, if this node has already been visited
         '''
         if not isinstance(x, float):
             if isinstance(x,int):
@@ -45,10 +44,10 @@ class Tracenode(object):
         self.children = []
         self.origin = set([self])
         self.contributesto = set()
-        #####self.origin = [self.i] #if the created Tracenode is a result of an operation, then self.origin will be set to the corresponding origin indices while the operation is executed..
         self.operation = 'Id' #Default value: Identity function        
         self.opconst = None #states, if the operation was performed using a constant
         self.visited = False
+        self.depth = 0
         Tracenode.it = Tracenode.it+1
         #Tracenode.Tracenodelist.append(self) #stores all the during a function evaluation created objects of type Tracenode in a list.
         
@@ -69,7 +68,7 @@ class Tracenode(object):
         childrentrace = []
         for x in self.children:
             childrentrace.append(x.i)
-        return ' tracer no. {} \tparents: {} \toperation: {}\twith const.: {}\tchildren: {}\torigin: {}\tcontributesto: {}\tvalue {}\n'.format(self.i, parentstrace, self.operation,self.opconst, childrentrace, ortrace ,contrtrace, self.x)
+        return ' tracer no. {} \tdepth: {}\tparents: {} \toperation: {}\twith const.: {}\tchildren: {}\torigin: {}\tcontributesto: {}\tvalue {}\n'.format(self.i, self.depth, parentstrace, self.operation,self.opconst, childrentrace, ortrace ,contrtrace, self.x)
         
         
     def __add__(self, other):
@@ -91,15 +90,16 @@ class Tracenode(object):
             addit.opconst = other 
             addit.parents = [self] 
             addit.origin = self.origin
+            addit.depth = self.depth + 1
         else:
             addit = Tracenode(self.x + other.x)          
             addit.parents = [self, other]
             other.children.append(addit)
             addit.origin = self.origin | other.origin
+            addit.depth = max(self.depth,other.depth) +1
         self.children.append(addit)
         addit.operation = 'add'
-        print(addit)
-
+        #print(addit)
         return addit
 
 
@@ -126,15 +126,16 @@ class Tracenode(object):
             subtr.opconst = other
             subtr.parents = [self]   
             subtr.origin = self.origin
+            subtr.depth = self.depth + 1
         else:
             subtr = Tracenode(self.x - other.x)     
             subtr.parents = [self, other]
             other.children.append(subtr.i)
             subtr.origin = self.origin | other.origin
+            subtr.depth = max(self.depth,other.depth) +1
         self.children.append(subtr)
         subtr.operation = 'sub' 
-        
-        print(subtr)
+        #print(subtr)
         return subtr
         
             
@@ -155,15 +156,16 @@ class Tracenode(object):
             multip.opconst = other
             multip.parents = [self] 
             multip.origin = self.origin
+            multip.depth = self.depth +1
         else:
             multip = Tracenode(self.x * other.x)
             multip.parents = [self, other]
             other.children.append(multip.i)        
             multip.origin = self.origin | other.origin
+            multip.depth = max(self.depth,other.depth) +1
         self.children.append(multip)
         multip.operation = 'mul'  
-        
-        print(multip)
+        #print(multip)
         return multip
         
         
@@ -190,15 +192,16 @@ class Tracenode(object):
             divis.opconst = other
             divis.parents = [self]  
             divis.origin = self.origin
+            divis.depth = self.depth + 1
         else:
             divis = Tracenode(self.x / other.x)       
             divis.parents = [self, other]
             other.children.append(divis.i)
             divis.origin = self.origin | other.origin
+            divis.depth = max(self.depth,other.depth) +1
         self.children.append(divis)
         divis.operation = 'div'
-        
-        print(divis)
+        #print(divis)
         return divis
         
         
@@ -214,14 +217,15 @@ class Tracenode(object):
         if not isinstance(other, int):
             raise TypeError('function power is only defined for to the power of integers.')
         power = Tracenode(self.x**other)
-        #power.parents = [self]
+        power.parents = [self]
         power.operation = 'pow'
         self.children.append(power)
         power.opconst = other
         power.origin = self.origin
-        
-        print(power)
+        power.depth = self.depth +1
+        #print(power)
         return power
+        
         
     def sin(self):
         '''
@@ -232,8 +236,10 @@ class Tracenode(object):
         sinu = Tracenode(sin(self.x))
         sinu.operation = 'sin'
         self.children.append(sinu)
+        sinu.parents = [self]
         sinu.origin = self.origin
-        print(sinu)
+        sinu.depth = self.depth +1
+        #print(sinu)
         return sinu
         
     def cos(self):
@@ -244,12 +250,15 @@ class Tracenode(object):
         cosi = Tracenode(cos(self.x))
         cosi.operation = 'cos'
         self.children.append(cosi)
+        cosi.parents = [self]
         cosi.origin = self.origin
-        print(cosi)
+        cosi.depth = self.depth +1
+        #print(cosi)
         return cosi
         
+        
     def exp(self):
-        '''method __exp__:  overloaded the exp operator, so it can be used for data of type Tracenode.
+        '''method __exp__: overloaded the exp operator, so it can be used for data of type Tracenode.
         -input:     Tracenode self
         -output:    Tracenode(exp(self.x))
         '''
@@ -257,7 +266,9 @@ class Tracenode(object):
         expo.operation = 'exp'
         self.children.append(expo)
         expo.origin = self.origin
-        print(expo) 
+        expo.parents = [self]
+        expo.depth = self.depth +1
+        #print(expo) 
         return expo
         
     
@@ -284,12 +295,13 @@ class Tracenode(object):
                         This is done in the following way:
                         if self has no parents: self.children is set to an empty list.
                         if self has parents:    self is deleted from the children list of its parents.
-        -input:         Tracenode, which is to be deleted from the graph
-        -output:        None.
+        -input:     Tracenode, which is to be deleted from the graph
+        -output:    None.
         '''
         if (self.parents==[self] and self.operation=='Id'):
             self.children = []
         else:
+            #for k in range(len(Tracenode.Tracenodelist)): #delete node from Tracenodelist.#    if Tracenode.Tracenodelist[k]==self:#       del(Tracenode.Tracenodelist[k])#       break
             for j in range(len(self.parents)):
                 for i in range(len(self.parents[j].children)):
                     if self.parents[j].children[i]==self:
@@ -316,7 +328,6 @@ class Graph(object):
         An object of the class Graph is initialized by a list or array of the independent and 
         a list or array of the dependent variables of a function evaluation. 
         The variables need to be of type Tracenode.
-        
         Attributes:
         -self.independent:      List containing the independent variables of the graph.
         -self.dependent:        List containing the dependent variables of the graph.
@@ -335,7 +346,6 @@ class Graph(object):
         for i in range(len(dependent)):
             if not isinstance(dependent[i], Tracenode):
                 raise TypeError('The dependent variables need to be of type Tracenode or an array of Tracenodes.')
-        
         self.independent = independent 
         set_contributesto(array(dependent))
         self.dependent = dependent
@@ -346,7 +356,6 @@ class Graph(object):
         printlist = self.independent
         while len(printlist)>0:
             print(printlist[0])
-
             for i in range(len(printlist[0].children)):
                 marker2 = False
                 for j in range(len(printlist)):
@@ -355,8 +364,7 @@ class Graph(object):
                 if marker2 == False:
                     printlist = printlist + [printlist[0].children[i]]
             del(printlist[0])
-
-        return '\nindependents: {}\ndependents: {}'.format(self.independent,self.dependent)
+        return '\n-------------------------------------------------\nindependents: \n{}\n-------------------------------------------------\ndependents: \n{}'.format(self.independent,self.dependent)
         
         
         
@@ -366,22 +374,25 @@ class Graph(object):
         method optimize:    optimizes the given graph by deleting all unnecessary computation steps. 
                             Unnecessary computation steps are those, which do not contribute to the computation of 
                             a given dependent variable.
-        -input:             depvar: dependent variable or list/array of dependent variables
-                            whose computational graph is to be optimized.
-        -output:            None. The given graph is optimized.
+        -input:         depvar: dependent variable or list/array of dependent variables
+                        whose computational graph is to be optimized.
+        -output:        None. The given graph is optimized.
         '''
         if type(depvar)==ndarray:
             depvar = depvar.tolist()
+        else:
+            if isinstance(depvar,Tracenode):
+                depvar = [depvar]
         if type(depvar)==list:
             if len(depvar)>self.dependent:
                 raise Exception('There are not that many dependent variables in the graph.')
             for i in range(len(depvar)):
                 if not isinstance(depvar[i], Tracenode):
                     raise Exception('The dependent variable(s) whose computation is to be optimized need to be of type Tracenode.')
+                if not depvar[i] in self.dependent:
+                    raise Exception('The variable(s) whose computation is to be optimized need to be dependent variable(s) of the graph.')
         else: 
-            if not isinstance(depvar, Tracenode):
-                raise TypeError('depvar needs to be of type Tracenode or a list of Tracenodes.')
-            depvar = [depvar]
+            raise TypeError('depvar needs to be of type Tracenode or a list of Tracenodes.')
         searchlist = []
         for i in range(len(self.independent)):
             searchlist = searchlist + [self.independent[i]]
@@ -390,12 +401,7 @@ class Graph(object):
             node = searchlist[0]
             if len(node.children)>0:
                 for j in range(len(node.children)):
-                   # alreadyin = False
-                   # for a in range(len(searchlist)):
-                    #    if node.children[j] == searchlist[a]:
-                    #        alreadyin = True
-                    #if alreadyin == False:
-                    if node.children[j].visited == False:
+                    if node.children[j].visited == False and node.children[j].depth == node.depth +1:
                         searchlist.append(node.children[j])
                         node.children[j].visited = True
             node.contributesto = node.contributesto & set(depvar)
@@ -425,7 +431,7 @@ class Graph(object):
         else:
             if not isinstance(indepval[0], Tracenode):
                 raise TypeError('the independent variables need to be given in form of a list of integers/floats or Tracenodes!')
-            for j in range(len(self.independent)):
+            for j in range(len(self.independent)): 
                 indepval[j].i = self.independent[j].i
                 indepval[j].contributesto = self.independent[j].contributesto
                 indepval[j].children = self.independent[j].children
@@ -434,7 +440,7 @@ class Graph(object):
         for i in range(len(self.independent)):
             self.independent[i].visited = True
             for j in range(len(self.independent[i].children)):
-                if self.independent[i].children[j].visited == False:
+                if self.independent[i].children[j].visited == False and self.independent[i].children[j].depth==self.independent[i].depth +1:
                     storelist = storelist + [self.independent[i].children[j]]
                     if self.independent[i].children[j].parents[0].i == self.independent[i].i: # this if/else-statement makes sure, that the children are computed with the new parents..
                         self.independent[i].children[j].parents[0] = self.independent[i]
@@ -444,7 +450,7 @@ class Graph(object):
         while len(storelist)>0:
             node = storelist[0]
             for j in range(len(node.children)):
-                if node.children[j].visited == False:
+                if node.children[j].visited == False and node.children[j].depth==node.depth+1:
                     storelist = storelist + [node.children[j]]
                     node.children[j].visited = True
             if len(node.parents)==2:
@@ -481,10 +487,9 @@ class Graph(object):
             
     def write_c_code(self, filename):
         '''
-        method write_c_code:        this method creates a c-file called filename.c. 
-                                    This file contains the c code for the function evaluation.
-                                    The c code is written while going through the graph as is done in the graph method evaluate.
-                            
+        method write_c_code:This method creates a c-file called filename.c. 
+                            This file contains the c code for the function evaluation.
+                            The c code is written while going through the graph as is done in the graph method evaluate.
         -input:         string '... .c': name of the file, which should contain the c code of the function evaluation.
         -output:        None.
         ''' 
@@ -493,72 +498,76 @@ class Graph(object):
         if not filename[-1] =='c':
             raise Exception("The filename should be a string that looks like 'name.c'!")
         if not filename[-2] =='.':
-            raise Exception("The filename should be a string that looks like 'name.c'!")
-            
+            raise Exception("The filename should be a string that looks like 'name.c'!")   
         storelist = []
-        size = 0
-        #s = 'void fun( int nx, double *x, int ny, double *y)\n{\n'
-        s = 'void fun(double x[], double y[])\n{\n'
         ##fehlermeldung für c code einbauen: falls nx bzw. len(self.independent) nicht size(x) entspricht. und gleiches für ny bzw. len(self.dependent) und y.....
+        size = 0 # determine number of nodes in the graph aka the size of the field we need in the c code..
         for j in range(len(self.dependent)):
             if self.dependent[j].i > size:
                 size = self.dependent[j].i
         size = size +1
-        s = s + '   double v[{}];\n'.format(size)
+        newid = zeros(size,int) # will serve as a map to map the id of the node in the unoptimized graph to a "new fake-id" in the (un)optimized graph
+        s = ''
         for i in range(len(self.independent)):
             self.independent[i].visited = True
-            s = s + '   v[{}] = x[{}];\n'.format(i, self.independent[i].i)
+            s = s +'   v[{}] = x[{}];\n'.format(i, self.independent[i].i)
             for j in range(len(self.independent[i].children)):
-                if self.independent[i].children[j].visited == False:
+                if self.independent[i].children[j].visited == False and self.independent[i].children[j].depth == self.independent[i].depth +1:
                     storelist = storelist + [self.independent[i].children[j]]
                     self.independent[i].children[j].visited = True
-        while len(storelist)>0:
-            node = storelist[0]
-            for j in range(len(node.children)):
-                if node.children[j].visited == False:
-                    storelist = storelist + [node.children[j]]
-                    node.children[j].visited = True
-            if len(node.parents)==2:
-                if node.operation == 'add':
-                    s = s + '   v[{}] = v[{}] + v[{}];\n'.format(node.i,node.parents[0].i,node.parents[1].i)  
-                elif node.operation == 'sub':
-                    s = s + '   v[{}] = v[{}] - v[{}];\n'.format(node.i,node.parents[0].i, node.parents[1].i)
-                elif node.operation == 'div':
-                    s = s + '   v[{}] = v[{}] / v[{}];\n'.format(node.i,node.parents[0].i, node.parents[1].i)
-                elif node.operation =='mul':
-                    s = s + '   v[{}] = v[{}] * v[{}];\n'.format(node.i,node.parents[0].i, node.parents[1].i)
+            newid[self.independent[i].i] = self.independent[i].i
+        for k in range(size-len(self.independent)):            
+            if len(storelist)>k:
+                node = storelist[k]
+                newid[node.i] = k+len(self.independent)
+                for j in range(len(node.children)):
+                    if node.children[j].visited == False and node.children[j].depth ==node.depth +1:
+                        storelist = storelist + [node.children[j]]
+                        node.children[j].visited = True
+                if len(node.parents)==2:
+                    if node.operation == 'add':
+                        s = s + '   v[{}] = v[{}] + v[{}];\n'.format(newid[node.i],newid[node.parents[0].i],newid[node.parents[1].i])  
+                    elif node.operation == 'sub':
+                        s = s + '   v[{}] = v[{}] - v[{}];\n'.format(newid[node.i],newid[node.parents[0].i], newid[node.parents[1].i])
+                    elif node.operation == 'div':
+                        s = s + '   v[{}] = v[{}] / v[{}];\n'.format(newid[node.i],newid[node.parents[0].i], newid[node.parents[1].i])
+                    elif node.operation =='mul':
+                        s = s + '   v[{}] = v[{}] * v[{}];\n'.format(newid[node.i],newid[node.parents[0].i], newid[node.parents[1].i])
+                else:
+                    if node.operation =='add':
+                        s = s + '   v[{}] = v[{}] + {};\n'.format(newid[node.i],newid[node.parents[0].i], node.opconst)
+                    elif node.operation =='sub':
+                        s = s + '   v[{}] = v[{}] - {};\n'.format(newid[node.i],newid[node.parents[0].i], node.opconst)
+                    elif node.operation == 'mul':
+                        s = s + '   v[{}] = v[{}] * {};\n'.format(newid[node.i],newid[node.parents[0].i], node.opconst)
+                    elif node.operation =='div':
+                        s = s + '   v[{}] = v[{}] / {};\n'.format(newid[node.i],newid[node.parents[0].i], node.opconst)
+                    elif node.operation =='pow':
+                        s = s + '   v[{}] = v[{}] ** {};\n'.format(newid[node.i],newid[node.parents[0].i], node.opconst)
+                    elif node.operation == 'sin':
+                        s = s + '   v[{}] = sin(v[{}]);\n'.format(newid[node.i],newid[node.parents[0].i])
+                    elif node.operation == 'cos':
+                        s = s + '   v[{}] = cos(v[{}]);\n'.format(newid[node.i],newid[node.parents[0].i])
+                    elif node.opareation == 'exp':
+                        s = s + '   v[{}] = exp(v[{}]);\n'.format(newid[node.i],newid[node.parents[0].i])
             else:
-                if node.operation =='add':
-                    s = s + '   v[{}] = v[{}] + {};\n'.format(node.i,node.parents[0].i, node.opconst)
-                elif node.operation =='sub':
-                    s = s + '   v[{}] = v[{}] - {};\n'.format(node.i,node.parents[0].i, node.opconst)
-                elif node.operation == 'mul':
-                    s = s + '   v[{}] = v[{}] * {};\n'.format(node.i,node.parents[0].i, node.opconst)
-                elif node.operation =='div':
-                    s = s + '   v[{}] = v[{}] / {};\n'.format(node.i,node.parents[0].i, node.opconst)
-                elif node.operation =='pow':
-                    s = s + '   v[{}] = v[{}] ** {};\n'.format(node.i,node.parents[0].i, node.opconst)
-                elif node.operation == 'sin':
-                    s = s + '   v[{}] = sin(v[{}]);\n'.format(node.i,node.parents[0].i)
-                elif node.operation == 'cos':
-                    s = s + '   v[{}] = cos(v[{}]);\n'.format(node.i,node.parents[0].i)
-                elif node.opareation == 'exp':
-                    s = s + '   v[{}] = exp(v[{}]);\n'.format(node.i,node.parents[0].i)
-            del(storelist[0])
+                break
         for j in range(len(self.dependent)):
-            s = s + '   y[{}] = v[{}];\n'.format(j,self.dependent[j].i)
+            s = s + '   y[{}] = v[{}];\n'.format(j,newid[self.dependent[j].i])
+        s = 'void fun(double x[], double y[])\n{\n' + '   double v[{}];\n'.format(newid[size-1]+1)+ s
         s = s + '}'
-        setvisitedfalse(self.independent)
+        setvisitedfalse(self.independent) #we're done. so we set all the visited-attributes back to False
         print(s)
-        with open(filename, 'w') as cfile:
+        with open(filename, 'w') as cfile: #write the string in a c-file with name filename
             cfile.write(s)
-            
+          
+          
             
 def setvisitedfalse(nodelist):
     '''
     method setvisitedfalse: sets the attribute visited on False for all nodes in the Graph 
                             which emerges from the nodes in nodelist.
-    -input: list of nodes
+    -input:     list of nodes
     '''
     if not isinstance(nodelist,list):
         raise TypeError(' input for setvisitedfalse needs to be of type list')
@@ -621,12 +630,19 @@ def set_contributesto(result):
             storelist = [node.parents[0]] + storelist #here, also save the smaller(?) parent in the storelist, but it will be used and deleted right in the beginning of the next while-loop.so this is the current node.
     
     
-
-
-            
-        
-     
-        
+#def qrdecomp(A):
+#    if not isinstance(A,ndarray):
+#        raise TypeError('Input A needs to be a matrix.')
+#    (m,n) = shape(A)    
+#    for k in range(n):
+#        z = A[k:m,k]
+#        uk = z
+#        uk[0] = uk[0] + sign(z[0])*norm(z)
+#        uk = uk/norm(uk)
+#        vk = zeros(m)
+#        vk[k:m] = uk
+#        A = A - dot((2*vk),(dot(A,vk)))
+#    return A
 #################################################################################
 #################################################################################
 #################################################################################        
@@ -642,7 +658,7 @@ def set_contributesto(result):
     
 def testfunction2(w):
     A = array([[1,0],[0,1]])
-    b = 2*dot(A,w)
+    b = dot(A,w)
     return b
     
 l1 = Tracenode(2.)
