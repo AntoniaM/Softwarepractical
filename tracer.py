@@ -85,7 +85,8 @@ class Tracenode(object):
             if isinstance(other, int):
                 other = float(other)
             else: 
-                raise TypeError('Addition is only defined for types Tracenode and Tracenode or float or int.')
+                if not isinstance(other,float):
+                    raise TypeError('Addition is only defined for types Tracenode and Tracenode or float or int.')
             addit = Tracenode(self.x + other)     
             addit.opconst = other 
             addit.parents = [self] 
@@ -120,8 +121,9 @@ class Tracenode(object):
         if not isinstance(other, Tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
             if isinstance(other, int):
                 other = float(other)
-            else: 
-                raise TypeError('Subtraction is only defined for types Tracenode and Tracenode or float or int.')
+            else:
+                if not isinstance(other,float): 
+                    raise TypeError('Subtraction is only defined for types Tracenode and Tracenode or float or int.')
             subtr = Tracenode(self.x - other)     
             subtr.opconst = other
             subtr.parents = [self]   
@@ -137,6 +139,18 @@ class Tracenode(object):
         subtr.operation = 'sub' 
         #print(subtr)
         return subtr
+    
+    def __rsub__(self,other=0.):
+        return self-other
+        
+    def __neg__(self):
+        nega = Tracenode(-self.x)
+        nega.parents = [self]
+        nega.origin = self.origin
+        nega.depth = self.depth +1
+        self.children.append(nega)
+        nega.operation = 'neg'
+        return nega        
         
             
     def __mul__(self, other):
@@ -151,7 +165,8 @@ class Tracenode(object):
             if isinstance(other, int):
                 other = float(other)
             else: 
-                raise TypeError('Multiplication is only defined for types Tracenode and Tracenode or float or int.')
+                if not isinstance(other,float):
+                    raise TypeError('Multiplication is only defined for types Tracenode and Tracenode or float or int.')
             multip = Tracenode(self.x * other)     
             multip.opconst = other
             multip.parents = [self] 
@@ -160,7 +175,7 @@ class Tracenode(object):
         else:
             multip = Tracenode(self.x * other.x)
             multip.parents = [self, other]
-            other.children.append(multip.i)        
+            other.children.append(multip)        
             multip.origin = self.origin | other.origin
             multip.depth = max(self.depth,other.depth) +1
         self.children.append(multip)
@@ -186,8 +201,9 @@ class Tracenode(object):
                 raise ZeroDivisionError('Division by Zero not possible')
             if isinstance(other, int):
                 other = float(other)
-            else: 
-                raise TypeError('Division is only defined for types Tracenode and Tracenode or float or int.')
+            else:
+                if not isinstance(other,float): 
+                    raise TypeError('Division is only defined for types Tracenode and Tracenode or float or int.')
             divis = Tracenode(self.x / other)     
             divis.opconst = other
             divis.parents = [self]  
@@ -196,7 +212,7 @@ class Tracenode(object):
         else:
             divis = Tracenode(self.x / other.x)       
             divis.parents = [self, other]
-            other.children.append(divis.i)
+            other.children.append(divis)
             divis.origin = self.origin | other.origin
             divis.depth = max(self.depth,other.depth) +1
         self.children.append(divis)
@@ -548,8 +564,10 @@ class Graph(object):
                         s = s + '   v[{}] = sin(v[{}]);\n'.format(newid[node.i],newid[node.parents[0].i])
                     elif node.operation == 'cos':
                         s = s + '   v[{}] = cos(v[{}]);\n'.format(newid[node.i],newid[node.parents[0].i])
-                    elif node.opareation == 'exp':
+                    elif node.operation == 'exp':
                         s = s + '   v[{}] = exp(v[{}]);\n'.format(newid[node.i],newid[node.parents[0].i])
+                    elif node.operation == 'neg':
+                        s = s + '   v[{}] = -v[{}];\n'.format(newid[node.i],newid[node.parents[0].i])
             else:
                 break
         for j in range(len(self.dependent)):
@@ -618,6 +636,7 @@ def set_contributesto(result):
                 marker = True
         else:
             for i in range(len(node.children)):
+                print(node)
                 node.contributesto = node.contributesto | node.children[i].contributesto
                 
         del(storelist[0]) #the current node can now be deleted from the 'wating list'
@@ -630,6 +649,149 @@ def set_contributesto(result):
             storelist = [node.parents[0]] + storelist #here, also save the smaller(?) parent in the storelist, but it will be used and deleted right in the beginning of the next while-loop.so this is the current node.
     
     
+    
+    
+
+
+
+
+def rk_4(fun, y0, (t0,tend)):
+    '''rk_4:    solves a differential equation using the classical Runge-Kutte method.
+    -input:     fun:        the right hand side of the differential equation which is to be solved
+                y0:         initial value of the problem
+                (t0,tend):  tuple of the interval borders, the differential equation is considered on.
+    -output:    y:          array of size 100, which contains the value of the numerical solution y computed at
+                            100 discrete and distinct points of time in the interval [t0,tend], with y[0] being the initial value
+                            and y[100] = y[tend].
+    '''
+    
+    
+    t0,tend = (t0,tend)
+    if t0 > tend:
+        raise Exception('t0 needs to be smaller than tend!')
+    if t0<0 or tend <= 0:
+        raise Exception('t0 and tend need to nonnegative, and tend > 0.')
+    #Butcher-Tableau parameters for the classical Runge-Kutta method:
+    b = array([1/6, 1/3, 1/3, 1/6])
+    c = array([0, 1/2, 1/2, 1])
+    A = array([[0,0,0,0], [1/2,0,0,0],[0,1/2,0,0], [0,0,1,0]])
+    h = (tend - t0)/3 #constant step size#+#
+    t = t0   #initial time
+    y = zeros((3,2))#+#
+    y[0,:] = y0 # initial value
+    k = zeros((4,2)) 
+    t = t0
+    for i in range(0,2): # we now perform the 100 steps #+#
+        t = t + h # perform time step
+        for j in range(0,4):
+            k[j] = fun(t + h*c[j], y[i] + h*(array([sum(A[j,:]*k[:,0]),sum(A[j,:]*k[:,1])]))) #compute the increments
+        y[i+1,:]  = array([y[i,0] + h*sum(b*k[:,0]),y[i,1] + h*sum(b*k[:,1])]) # compute the solution at the current time
+    return y
+    
+    
+def rk_4T(fun, y0, (t0,tend)):
+    '''rk_4:    solves a differential equation using the classical Runge-Kutte method.
+    -input:     fun:        the right hand side of the differential equation which is to be solved
+                y0:         initial value of the problem
+                (t0,tend):  tuple of the interval borders, the differential equation is considered on.
+    -output:    y:          array of size 100, which contains the value of the numerical solution y computed at
+                            100 discrete and distinct points of time in the interval [t0,tend], with y[0] being the initial value
+                            and y[100] = y[tend].
+    '''
+    #####statt 100 schritten hier erst mal 3..später ändern!! dort, wo #+# steht
+    
+    t0,tend = (t0,tend)
+    if t0 > tend:
+        raise Exception('t0 needs to be smaller than tend!')
+    if t0<0 or tend <= 0:
+        raise Exception('t0 and tend need to nonnegative, and tend > 0.')
+    #Butcher-Tableau parameters for the classical Runge-Kutta method:
+    b = array([1/6, 1/3, 1/3, 1/6])
+    c = array([0, 1/2, 1/2, 1])
+    A = array([[0,0,0,0], [1/2,0,0,0],[0,1/2,0,0], [0,0,1,0]])
+    h = (tend - t0)/3 #constant step size #+#
+    t = t0   #initial time
+    #y1 = [[Tracenode(0.), Tracenode(0.)] for x in range(3)]#+#
+    #y = array(y1)    
+    #y = zeros((100,2),Tracenode)
+    #y[0,:] = y0 # initial value
+    #y[0] = y0
+    y = [y0]
+    #k = array([[Tracenode(0.), Tracenode(0.)] for x in range(4)])
+    #print('k')
+    #print(k)
+    #k = zeros((4,2),Tracenode)
+    t = t0
+    for i in range(0,2): # we now perform the 100 steps#+#
+        k = []
+        t = t + h # perform time step
+        k.append(fun(t + h*c[0], array([y[-1][0] + h*sum(A[0,:]), y[-1][1] + h*sum(A[0,:])])))
+        k.append(fun(t + h*c[1], array([y[-1][0] + h*sum(A[1,0]*k[-1][0]), y[-1][1] + h*sum(A[1,0]*k[-1][1])])))
+        k.append(fun(t + h*c[2], array([y[-1][0] + h*sum(A[2,1]*k[-1][0]), y[-1][1] + h*sum(A[2,1]*k[-1][1])])))
+        k.append(fun(t + h*c[3], array([y[-1][0] + h*sum(A[3,2]*k[-1][0]), y[-1][1] + h*sum(A[3,2]*k[-1][1])])))        
+#        for j in range(0,4):
+#            #w4 = zeros(2,Tracenode)
+#            #w4 = y[i,:] + h*(array([sum(A[j,:]*k[:,0]),sum(A[j,:]*k[:,1]]))
+#            #w4 = array([y[i,0] + h*sum(A[j,:]*k[:,0]), y[i,1] + h*sum(A[j,:]*k[:,1])])
+#            #w4[1] = y[i,1] + h*sum(A[j,:]*k[:,1])
+#            #k[j] = fun(t + h*c[j], array([y[i,0] + h*sum(A[j,:]*k[:,0]), y[i,1] + h*sum(A[j,:]*k[:,1])])) #compute the increments
+#            k[j] = fun(t + h*c[j], array([y[-1][0] + h*sum(A[j,:]*k[:,0]), y[-1][1] + h*sum(A[j,:]*k[:,1])]))
+#            print('k[j]')
+#            #print(k[j])
+        #y[i+1,:]  = array([y[i,0] + h*sum(b*k[:,0]),y[i,1] + h*sum(b*k[:,1])]) # compute the solution at the current time
+#        y.append(array([y[-1][0] + h*sum(b*k[:,0]),y[-1][1] + h*sum(b*k[:,1])]))
+        k = array(k)
+        y.append(array([y[-1][0] + h*sum(b*k[:,0]),y[-1][1] + h*sum(b*k[:,1])]))
+        #y.append(array([y[-1][0] + h * sum(b*k[:,0,y[-1][1] + h * sum(b*k[:,1])])]))
+    return y
+    
+def rightside(t,y):
+    '''
+        rightside gives the right hand side of the Lotka-Volterra-system.
+        rs[0] describes the change of the prey at a certain time t
+        rs[1] describes the change of the preditor at the same time t.
+    -input:     time t, y array, where y[0] is the population of the prey at time t,
+                and y[1] is the population of the preditor at time t.
+    -output:    right hand side of the model.
+    '''
+    if not type(y)==ndarray:
+        raise TypeError(' y needs to be given in form of an array of dimension 2.')
+    if len(y)!=2:
+        raise Exception('y is of dimension 2')
+    if not isinstance(t,float):
+        raise TypeError('time t is of time float..')
+    rs = zeros([2])
+    rs[0] = y[0] * (100-y[1])
+    rs[1] = -y[1] * (100-y[0])
+    return rs    
+    
+def rightsideT(t,y):
+    '''
+        rightside gives the right hand side of the Lotka-Volterra-system.
+        rs[0] describes the change of the prey at a certain time t
+        rs[1] describes the change of the preditor at the same time t.
+    -input:     time t, y array, where y[0] is the population of the prey at time t,
+                and y[1] is the population of the preditor at time t.
+    -output:    right hand side of the model.
+    '''
+    if not type(y)==ndarray:
+        raise TypeError(' y needs to be in form of an array of dimension 2.')
+    if len(y)!=2:
+        raise Exception('y is of dimension 2')
+    if not isinstance(t,float):
+        raise TypeError('time t is of time float..')
+    #rs = zeros([2],Tracenode)
+    #rs = array([Tracenode(0.),Tracenode(0.)])
+    #rs = array([Tracenode(y[0] * (100-y[1])),Tracenode(-y[1] * (100-y[0]))])
+    #rs[1] = -y[1] * (100-y[0])
+    return array([y[0] * (100-y[1]),-y[1] * (100-y[0])])
+    
+    
+print(rk_4(rightside,array([200,100]),(0,1)))
+a = Tracenode(200.)
+b= Tracenode(100.)
+v  = rk_4T(rightsideT,array([a,b]),(0,1))
+print(v)   
 #def qrdecomp(A):
 #    if not isinstance(A,ndarray):
 #        raise TypeError('Input A needs to be a matrix.')
@@ -656,14 +818,14 @@ def set_contributesto(result):
 #p = testfunction3(u,v)
 #print('The result is {} and has tracer number {}.'.format(p.x, p.i))
     
-def testfunction2(w):
-    A = array([[1,0],[0,1]])
-    b = dot(A,w)
-    return b
-    
-l1 = Tracenode(2.)
-l2 = Tracenode(1.)  
-l3 = testfunction2(array([l1,l2]))
+##def testfunction2(w):
+##    A = array([[1,0],[0,1]])
+##    b = dot(A,w)
+##    return b
+##    
+##l1 = Tracenode(2.)
+##l2 = Tracenode(1.)  
+##l3 = testfunction2(array([l1,l2]))
 
 ##print('The result is [{},{}].'.format(l3[0].x,l3[1].x))
 #    
