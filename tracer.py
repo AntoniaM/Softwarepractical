@@ -140,8 +140,30 @@ class Tracenode(object):
         #print(subtr)
         return subtr
     
-    def __rsub__(self,other=0.):
-        return self-other
+    def __rsub__(self,other):
+        if not isinstance(other, Tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
+            if isinstance(other, int):
+                other = float(other)
+            else:
+                if not isinstance(other,float): 
+                    raise TypeError('Subtraction is only defined for types Tracenode and Tracenode or float or int.')
+            subtr = Tracenode(other - self.x)     
+            subtr.opconst = other
+            subtr.parents = [self]   
+            subtr.origin = self.origin
+            subtr.depth = self.depth + 1
+        else:
+            subtr = Tracenode(other.x-self.x)     
+            subtr.parents = [other, self]
+            other.children.append(subtr.i)
+            subtr.origin = self.origin | other.origin
+            subtr.depth = max(self.depth,other.depth) +1
+        self.children.append(subtr)
+        subtr.operation = 'rsub' 
+        #print(subtr)
+        return subtr
+        
+            
         
     def __neg__(self):
         nega = Tracenode(-self.x)
@@ -369,17 +391,17 @@ class Graph(object):
         
         
     def __repr__(self):
-        printlist = self.independent
-        while len(printlist)>0:
-            print(printlist[0])
-            for i in range(len(printlist[0].children)):
-                marker2 = False
-                for j in range(len(printlist)):
-                    if printlist[0].children[i] == printlist[j]:
-                        marker2 = True
-                if marker2 == False:
-                    printlist = printlist + [printlist[0].children[i]]
-            del(printlist[0])
+#        printlist = self.independent
+#        while len(printlist)>0:
+#            print(printlist[0])
+#            for i in range(len(printlist[0].children)):
+#                marker2 = False
+#                for j in range(len(printlist)):
+#                    if printlist[0].children[i] == printlist[j]:
+#                        marker2 = True
+#                if marker2 == False:
+#                    printlist = printlist + [printlist[0].children[i]]
+#            del(printlist[0])
         return '\n-------------------------------------------------\nindependents: \n{}\n-------------------------------------------------\ndependents: \n{}'.format(self.independent,self.dependent)
         
         
@@ -474,6 +496,8 @@ class Graph(object):
                     node.x = node.parents[0].x + node.parents[1].x   
                 elif node.operation == 'sub':
                     node.x = node.parents[0].x - node.parents[1].x
+                elif node.operation == 'rsub':
+                    node.x = node.parents[0].x - node.parents[1].x
                 elif node.operation == 'div':
                     node.x = node.parents[0].x / node.parents[1].x
                 elif node.operation =='mul':
@@ -483,6 +507,8 @@ class Graph(object):
                     node.x = node.parents[0].x + node.opconst
                 elif node.operation =='sub':
                     node.x = node.parents[0].x - node.opconst
+                elif node.operation == 'rsub':
+                    node.x = node.opconst - node.parents[0]
                 elif node.operation == 'mul':
                     node.x = node.parents[0].x * node.opconst
                 elif node.operation =='div':
@@ -544,22 +570,26 @@ class Graph(object):
                     if node.operation == 'add':
                         s = s + '   v[{}] = v[{}] + v[{}];\n'.format(newid[node.i],newid[node.parents[0].i],newid[node.parents[1].i])  
                     elif node.operation == 'sub':
-                        s = s + '   v[{}] = v[{}] - v[{}];\n'.format(newid[node.i],newid[node.parents[0].i], newid[node.parents[1].i])
+                        s = s + '   v[{}] = v[{}] - v[{}];\n'.format(newid[node.i],newid[node.parents[0].i],newid[node.parents[1].i])
+                    elif node.operation == 'rsub':
+                        s = s + '   v[{}] = v[{}] - v[{}];\n'.format(newid[node.i],newid[node.parents[0].i],newid[node.parents[1].i])
                     elif node.operation == 'div':
-                        s = s + '   v[{}] = v[{}] / v[{}];\n'.format(newid[node.i],newid[node.parents[0].i], newid[node.parents[1].i])
+                        s = s + '   v[{}] = v[{}] / v[{}];\n'.format(newid[node.i],newid[node.parents[0].i],newid[node.parents[1].i])
                     elif node.operation =='mul':
-                        s = s + '   v[{}] = v[{}] * v[{}];\n'.format(newid[node.i],newid[node.parents[0].i], newid[node.parents[1].i])
+                        s = s + '   v[{}] = v[{}] * v[{}];\n'.format(newid[node.i],newid[node.parents[0].i],newid[node.parents[1].i])
                 else:
                     if node.operation =='add':
                         s = s + '   v[{}] = v[{}] + {};\n'.format(newid[node.i],newid[node.parents[0].i], node.opconst)
                     elif node.operation =='sub':
                         s = s + '   v[{}] = v[{}] - {};\n'.format(newid[node.i],newid[node.parents[0].i], node.opconst)
+                    elif node.operation == 'rsub':
+                        s = s + '   v[{}] = {} - v[{}];\n'.format(newid[node.i],node.opconst,newid[node.parents[0].i])
                     elif node.operation == 'mul':
-                        s = s + '   v[{}] = v[{}] * {};\n'.format(newid[node.i],newid[node.parents[0].i], node.opconst)
+                        s = s + '   v[{}] = v[{}] * {};\n'.format(newid[node.i],newid[node.parents[0].i],node.opconst)
                     elif node.operation =='div':
-                        s = s + '   v[{}] = v[{}] / {};\n'.format(newid[node.i],newid[node.parents[0].i], node.opconst)
+                        s = s + '   v[{}] = v[{}] / {};\n'.format(newid[node.i],newid[node.parents[0].i],node.opconst)
                     elif node.operation =='pow':
-                        s = s + '   v[{}] = v[{}] ** {};\n'.format(newid[node.i],newid[node.parents[0].i], node.opconst)
+                        s = s + '   v[{}] = v[{}] ** {};\n'.format(newid[node.i],newid[node.parents[0].i],node.opconst)
                     elif node.operation == 'sin':
                         s = s + '   v[{}] = sin(v[{}]);\n'.format(newid[node.i],newid[node.parents[0].i])
                     elif node.operation == 'cos':
@@ -636,7 +666,7 @@ def set_contributesto(result):
                 marker = True
         else:
             for i in range(len(node.children)):
-                print(node)
+                #print(node)
                 node.contributesto = node.contributesto | node.children[i].contributesto
                 
         del(storelist[0]) #the current node can now be deleted from the 'wating list'
@@ -699,50 +729,35 @@ def rk_4T(fun, y0, (t0,tend)):
                             and y[100] = y[tend].
     '''
     #####statt 100 schritten hier erst mal 3..später ändern!! dort, wo #+# steht
-    
     t0,tend = (t0,tend)
     if t0 > tend:
         raise Exception('t0 needs to be smaller than tend!')
     if t0<0 or tend <= 0:
-        raise Exception('t0 and tend need to nonnegative, and tend > 0.')
+        raise Exception('t0 and tend need to be non-negative, and tend > 0.')
     #Butcher-Tableau parameters for the classical Runge-Kutta method:
     b = array([1/6, 1/3, 1/3, 1/6])
     c = array([0, 1/2, 1/2, 1])
     A = array([[0,0,0,0], [1/2,0,0,0],[0,1/2,0,0], [0,0,1,0]])
     h = (tend - t0)/3 #constant step size #+#
     t = t0   #initial time
-    #y1 = [[Tracenode(0.), Tracenode(0.)] for x in range(3)]#+#
-    #y = array(y1)    
-    #y = zeros((100,2),Tracenode)
-    #y[0,:] = y0 # initial value
-    #y[0] = y0
     y = [y0]
-    #k = array([[Tracenode(0.), Tracenode(0.)] for x in range(4)])
-    #print('k')
-    #print(k)
-    #k = zeros((4,2),Tracenode)
     t = t0
     for i in range(0,2): # we now perform the 100 steps#+#
         k = []
+        k.append(fun(t + h*c[0], array([y[-1][0] , y[-1][1]])))
+        k.append(fun(t + h*c[1], array([y[-1][0] + h*A[1,0]*k[-1][0], y[-1][1] + h*A[1,0]*k[-1][1]])))
+        k.append(fun(t + h*c[2], array([y[-1][0] + h*A[2,1]*k[-1][0], y[-1][1] + h*A[2,1]*k[-1][1]])))
+        k.append(fun(t + h*c[3], array([y[-1][0] + h*A[3,2]*k[-1][0], y[-1][1] + h*A[3,2]*k[-1][1]])))  
+        print('k')        
+        print(k)
+        s1 = 0
+        s2 = 0
+        for j in range(len(k)):
+            w = b[j]*k[j]
+            s1 = s1 + w[0]
+            s2 = s2 + w[1]
+        y.append(array([y[-1][0] + h*s1,y[-1][1] + h*s2]))
         t = t + h # perform time step
-        k.append(fun(t + h*c[0], array([y[-1][0] + h*sum(A[0,:]), y[-1][1] + h*sum(A[0,:])])))
-        k.append(fun(t + h*c[1], array([y[-1][0] + h*sum(A[1,0]*k[-1][0]), y[-1][1] + h*sum(A[1,0]*k[-1][1])])))
-        k.append(fun(t + h*c[2], array([y[-1][0] + h*sum(A[2,1]*k[-1][0]), y[-1][1] + h*sum(A[2,1]*k[-1][1])])))
-        k.append(fun(t + h*c[3], array([y[-1][0] + h*sum(A[3,2]*k[-1][0]), y[-1][1] + h*sum(A[3,2]*k[-1][1])])))        
-#        for j in range(0,4):
-#            #w4 = zeros(2,Tracenode)
-#            #w4 = y[i,:] + h*(array([sum(A[j,:]*k[:,0]),sum(A[j,:]*k[:,1]]))
-#            #w4 = array([y[i,0] + h*sum(A[j,:]*k[:,0]), y[i,1] + h*sum(A[j,:]*k[:,1])])
-#            #w4[1] = y[i,1] + h*sum(A[j,:]*k[:,1])
-#            #k[j] = fun(t + h*c[j], array([y[i,0] + h*sum(A[j,:]*k[:,0]), y[i,1] + h*sum(A[j,:]*k[:,1])])) #compute the increments
-#            k[j] = fun(t + h*c[j], array([y[-1][0] + h*sum(A[j,:]*k[:,0]), y[-1][1] + h*sum(A[j,:]*k[:,1])]))
-#            print('k[j]')
-#            #print(k[j])
-        #y[i+1,:]  = array([y[i,0] + h*sum(b*k[:,0]),y[i,1] + h*sum(b*k[:,1])]) # compute the solution at the current time
-#        y.append(array([y[-1][0] + h*sum(b*k[:,0]),y[-1][1] + h*sum(b*k[:,1])]))
-        k = array(k)
-        y.append(array([y[-1][0] + h*sum(b*k[:,0]),y[-1][1] + h*sum(b*k[:,1])]))
-        #y.append(array([y[-1][0] + h * sum(b*k[:,0,y[-1][1] + h * sum(b*k[:,1])])]))
     return y
     
 def rightside(t,y):
@@ -760,9 +775,7 @@ def rightside(t,y):
         raise Exception('y is of dimension 2')
     if not isinstance(t,float):
         raise TypeError('time t is of time float..')
-    rs = zeros([2])
-    rs[0] = y[0] * (100-y[1])
-    rs[1] = -y[1] * (100-y[0])
+    rs = array([ y[0] * (100-y[1]),-y[1] * (100-y[0])])
     return rs    
     
 def rightsideT(t,y):
@@ -780,18 +793,15 @@ def rightsideT(t,y):
         raise Exception('y is of dimension 2')
     if not isinstance(t,float):
         raise TypeError('time t is of time float..')
-    #rs = zeros([2],Tracenode)
-    #rs = array([Tracenode(0.),Tracenode(0.)])
-    #rs = array([Tracenode(y[0] * (100-y[1])),Tracenode(-y[1] * (100-y[0]))])
-    #rs[1] = -y[1] * (100-y[0])
     return array([y[0] * (100-y[1]),-y[1] * (100-y[0])])
-    
+
     
 print(rk_4(rightside,array([200,100]),(0,1)))
 a = Tracenode(200.)
-b= Tracenode(100.)
-v  = rk_4T(rightsideT,array([a,b]),(0,1))
-print(v)   
+b = Tracenode(100.)
+v = rk_4T(rightsideT,array([a,b]),(0,1))
+print('\n\nresult:')
+print(v)
 #def qrdecomp(A):
 #    if not isinstance(A,ndarray):
 #        raise TypeError('Input A needs to be a matrix.')
