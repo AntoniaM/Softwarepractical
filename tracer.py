@@ -7,6 +7,7 @@ Created on Wed Aug 06 17:18:50 2014
 from __future__ import division
 from  scipy       import *
 from  matplotlib.pyplot import *
+from time import *
 
 
 class Tracenode(object):  
@@ -705,13 +706,13 @@ def rk_4(fun, y0, (t0,tend)):
     b = array([1/6, 1/3, 1/3, 1/6])
     c = array([0, 1/2, 1/2, 1])
     A = array([[0,0,0,0], [1/2,0,0,0],[0,1/2,0,0], [0,0,1,0]])
-    h = (tend - t0)/3 #constant step size#+#
+    h = (tend - t0)/100 #constant step size#+#
     t = t0   #initial time
-    y = zeros((3,2))#+#
+    y = zeros((100,2))#+#
     y[0,:] = y0 # initial value
     k = zeros((4,2)) 
     t = t0
-    for i in range(0,2): # we now perform the 100 steps #+#
+    for i in range(0,99): # we now perform the 100 steps #+#
         t = t + h # perform time step
         for j in range(0,4):
             k[j] = fun(t + h*c[j], y[i] + h*(array([sum(A[j,:]*k[:,0]),sum(A[j,:]*k[:,1])]))) #compute the increments
@@ -719,7 +720,7 @@ def rk_4(fun, y0, (t0,tend)):
     return y
     
     
-def rk_4T(fun, y0, (t0,tend)):
+def rk_4T(fun, y0, ts):
     '''rk_4:    solves a differential equation using the classical Runge-Kutte method.
     -input:     fun:        the right hand side of the differential equation which is to be solved
                 y0:         initial value of the problem
@@ -729,35 +730,31 @@ def rk_4T(fun, y0, (t0,tend)):
                             and y[100] = y[tend].
     '''
     #####statt 100 schritten hier erst mal 3..später ändern!! dort, wo #+# steht
-    t0,tend = (t0,tend)
-    if t0 > tend:
-        raise Exception('t0 needs to be smaller than tend!')
-    if t0<0 or tend <= 0:
-        raise Exception('t0 and tend need to be non-negative, and tend > 0.')
+    #if t0 > tend:
+    #    raise Exception('t0 needs to be smaller than tend!')
+    #if t0<0 or tend <= 0:
+    #    raise Exception('t0 and tend need to be non-negative, and tend > 0.')
     #Butcher-Tableau parameters for the classical Runge-Kutta method:
     b = array([1/6, 1/3, 1/3, 1/6])
     c = array([0, 1/2, 1/2, 1])
     A = array([[0,0,0,0], [1/2,0,0,0],[0,1/2,0,0], [0,0,1,0]])
-    h = (tend - t0)/3 #constant step size #+#
-    t = t0   #initial time
-    y = [y0]
-    t = t0
-    for i in range(0,2): # we now perform the 100 steps#+#
+    y = zeros((len(ts),2),dtype=object)
+    y[0,:] = y0
+    for i in range(0,len(ts)-1): # we now perform the 100 steps#+#
+        t = ts[i]
+        h = ts[i+1]-ts[i]
         k = []
-        k.append(fun(t + h*c[0], array([y[-1][0] , y[-1][1]])))
-        k.append(fun(t + h*c[1], array([y[-1][0] + h*A[1,0]*k[-1][0], y[-1][1] + h*A[1,0]*k[-1][1]])))
-        k.append(fun(t + h*c[2], array([y[-1][0] + h*A[2,1]*k[-1][0], y[-1][1] + h*A[2,1]*k[-1][1]])))
-        k.append(fun(t + h*c[3], array([y[-1][0] + h*A[3,2]*k[-1][0], y[-1][1] + h*A[3,2]*k[-1][1]])))  
-        print('k')        
-        print(k)
+        k.append(fun(t + h*c[0], array([y[i,0] , y[i,1]])))
+        k.append(fun(t + h*c[1], array([y[i,0] + h*A[1,0]*k[-1][0], y[i,1] + h*A[1,0]*k[-1][1]])))
+        k.append(fun(t + h*c[2], array([y[i,0] + h*A[2,1]*k[-1][0], y[i,1] + h*A[2,1]*k[-1][1]])))
+        k.append(fun(t + h*c[3], array([y[i,0] + h*A[3,2]*k[-1][0], y[i,1] + h*A[3,2]*k[-1][1]])))  
         s1 = 0
         s2 = 0
         for j in range(len(k)):
             w = b[j]*k[j]
             s1 = s1 + w[0]
             s2 = s2 + w[1]
-        y.append(array([y[-1][0] + h*s1,y[-1][1] + h*s2]))
-        t = t + h # perform time step
+        y[i+1,:]=array([y[-1][0] + h*s1,y[-1][1] + h*s2])
     return y
     
 def rightside(t,y):
@@ -795,26 +792,28 @@ def rightsideT(t,y):
         raise TypeError('time t is of time float..')
     return array([y[0] * (100-y[1]),-y[1] * (100-y[0])])
 
-    
-print(rk_4(rightside,array([200,100]),(0,1)))
+
+
+
 a = Tracenode(200.)
 b = Tracenode(100.)
-v = rk_4T(rightsideT,array([a,b]),(0,1))
-print('\n\nresult:')
-print(v)
-#def qrdecomp(A):
-#    if not isinstance(A,ndarray):
-#        raise TypeError('Input A needs to be a matrix.')
-#    (m,n) = shape(A)    
-#    for k in range(n):
-#        z = A[k:m,k]
-#        uk = z
-#        uk[0] = uk[0] + sign(z[0])*norm(z)
-#        uk = uk/norm(uk)
-#        vk = zeros(m)
-#        vk[k:m] = uk
-#        A = A - dot((2*vk),(dot(A,vk)))
-#    return A
+timevec = zeros(14)
+stepvec = array([1,2,4,8,16,64,128,256,512,1024,2048,4096,8192,16384])
+for i in range(len(stepvec)):
+    t1 = time()
+    v = rk_4T(rightsideT,array([a,b]),linspace(0,1/10,stepvec[i],endpoint=True))
+    t2 = time()
+    timevec[i] = t2-t1
+print(stepvec)
+print(timevec)
+loglog(stepvec,timevec,'r*-')
+title('Computing time')
+xlabel('number of steps')
+ylabel('time')
+axis([0,stepvec[13],0,timevec[13]])
+grid()
+show()
+
 #################################################################################
 #################################################################################
 #################################################################################        
