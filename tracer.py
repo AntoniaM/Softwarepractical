@@ -386,7 +386,7 @@ class Graph(object):
             if not isinstance(dependent[i], Tracenode):
                 raise TypeError('The dependent variables need to be of type Tracenode or an array of Tracenodes.')
         self.independent = independent 
-        set_contributesto(array(dependent))
+        set_contributestonew(array(dependent))
         self.dependent = dependent
 
         
@@ -448,7 +448,7 @@ class Graph(object):
                 node.delfromgraph()              
             del(searchlist[0])
         self.dependent = depvar
-        setvisitedfalse(self.independent)
+        setvisitedfalse(self.independent,'down')
         
         
     
@@ -523,7 +523,7 @@ class Graph(object):
                 elif node.opareation == 'exp':
                     node.x = exp(node.parents[0].x)
             del(storelist[0])
-        setvisitedfalse(self.independent)
+        setvisitedfalse(self.independent,'down')
         return self.dependent
             
             
@@ -561,6 +561,7 @@ class Graph(object):
             newid[self.independent[i].i] = self.independent[i].i
         for k in range(size-len(self.independent)):            
             if len(storelist)>k:
+                print(s)
                 node = storelist[k]
                 newid[node.i] = k+len(self.independent)
                 for j in range(len(node.children)):
@@ -605,33 +606,100 @@ class Graph(object):
             s = s + '   y[{}] = v[{}];\n'.format(j,newid[self.dependent[j].i])
         s = 'void fun(double x[], double y[])\n{\n' + '   double v[{}];\n'.format(newid[size-1]+1)+ s
         s = s + '}'
-        setvisitedfalse(self.independent) #we're done. so we set all the visited-attributes back to False
+        print('now set visited on false')
+        setvisitedfalse(self.independent,'down') #we're done. so we set all the visited-attributes back to False
         print(s)
         with open(filename, 'w') as cfile: #write the string in a c-file with name filename
             cfile.write(s)
           
           
             
-def setvisitedfalse(nodelist):
+def setvisitedfalse(nodelist,direction):
     '''
     method setvisitedfalse: sets the attribute visited on False for all nodes in the Graph 
                             which emerges from the nodes in nodelist.
-    -input:     list of nodes
+    -input:     list of nodes,direction
     '''
     if not isinstance(nodelist,list):
         raise TypeError(' input for setvisitedfalse needs to be of type list')
     storelist = nodelist
-    while len(storelist)>0:
-        storelist = storelist + storelist[0].children
-        storelist[0].visited = False
-        del(storelist[0])
+    if direction == 'down':
+        while len(storelist)>0:
+            storelist = storelist + storelist[0].children
+            storelist[0].visited = False
+            del(storelist[0])
+    if direction == 'up': 
+#        while len(storelist)>0:
+#            if not storelist[0].operation == 'Id':
+#                storelist = storelist + storelist[0].parents
+#            storelist[0].visited = False
+#            del(storelist[0])
+        while len(storelist)>0:
+            if storelist[0].visited == False:
+                del[storelist[0]]
+            else:
+                storelist[0].visited = False
+                if storelist[0].operation == 'Id':
+                    del(storelist[0])
+                else:
+                    storelist  = storelist[0].parents + storelist
+    else:
+        raise Exception('Possible directions for setvisited false are "up" and "down".')
+            
+def set_contributestonew(result):
+    '''
+    method set_contributesto:   method can be run after a function of Tracenodes has been evaluated.
+                            the method sets the attribute 'contributesto' for all tracenodes of the computation.
+                            The method runs through the computational graph using depth-first-search.
+    -input:     Tracenode or array of Tracenodes which is the result of a function evaluation.
+    -output:    None.
+    '''
+    if not isinstance(result,Tracenode):
+        if not type(result) == ndarray:
+            raise TypeError('Input should be a Tracenode or array of Tracenodes.')
+        else:
+            if not isinstance(result[0],Tracenode):
+                raise TypeError('Input should be a Tracenode or array of Tracenodes.')
+    #using 'depth-first-search':
+    #first, store the result(s) in a list -> easier to handle both cases...
+    if type(result)==Tracenode:
+        result = [result]
+    if type(result)==ndarray:
+        result = result.tolist()
         
-            
-            
+    def contributesto(result):
+        storelist = result
+        while len(storelist)>0:
+            node = storelist[0]
+            if node.visited == True:
+                del(storelist[0])
+            else:
+                if node in result:
+                    node.contributesto = set([node])
+                for j in range(len(node.children)):
+                    node.contributesto = node.contributesto | node.children[j].contributesto
+                node.visited = True
+                if node.operation == 'Id':
+                    del(storelist[0])
+                else:
+                    for k in range(len(node.parents)):
+                        if node.parents[k].visited == False:
+                            storelist = [node.parents[k]] + storelist 
+                            
+    for k in range(len(result)):
+        contributesto([result[k]])
+        print('first')
+        setvisitedfalse([result[k]],'up')
+        print('now go to second')
+    #storelist = []
+    #for i in range(len(result)):
+     #   storelist = storelist + [result[i]]
+
+
+    
 def set_contributesto(result):
     '''
-    method set_contributesto:   method can be run after a function of Tracenodes has been evaluated and 
-                            thus a Tracenodelist is created. 
+    method set_contributesto:   method can be run after a function of Tracenodes has been evaluated.
                             the method sets the attribute 'contributesto' for all tracenodes of the computation.
                             The method runs through the computational graph using depth-first-search.
     -input:     Tracenode or array of Tracenodes which is the result of a function evaluation.
@@ -658,13 +726,16 @@ def set_contributesto(result):
         if node in result:
             node.contributesto = set([node])
             if len(node.children)>0:
-                storelist.append(node) # we work with this result node later on
-                del(storelist[0])
-                node = storelist[0] #take next result node
+                if marker == False:
+                    storelist.append(node) # we work with this result node later on
+                    del(storelist[0])
+                    node = storelist[0] #take next result node
                 if marker == True:
                     for j in range(len(node.children)):
                         node.contributesto = node.contributesto | node.children[j].contributesto
+                    
                 marker = True
+                
         else:
             for i in range(len(node.children)):
                 #print(node)
@@ -695,8 +766,6 @@ def rk_4(fun, y0, (t0,tend)):
                             100 discrete and distinct points of time in the interval [t0,tend], with y[0] being the initial value
                             and y[100] = y[tend].
     '''
-    
-    
     t0,tend = (t0,tend)
     if t0 > tend:
         raise Exception('t0 needs to be smaller than tend!')
@@ -729,11 +798,6 @@ def rk_4T(fun, y0, ts):
                             100 discrete and distinct points of time in the interval [t0,tend], with y[0] being the initial value
                             and y[100] = y[tend].
     '''
-    #####statt 100 schritten hier erst mal 3..später ändern!! dort, wo #+# steht
-    #if t0 > tend:
-    #    raise Exception('t0 needs to be smaller than tend!')
-    #if t0<0 or tend <= 0:
-    #    raise Exception('t0 and tend need to be non-negative, and tend > 0.')
     #Butcher-Tableau parameters for the classical Runge-Kutta method:
     b = array([1/6, 1/3, 1/3, 1/6])
     c = array([0, 1/2, 1/2, 1])
@@ -741,20 +805,17 @@ def rk_4T(fun, y0, ts):
     y = zeros((len(ts),2),dtype=object)
     y[0,:] = y0
     for i in range(0,len(ts)-1): # we now perform the 100 steps#+#
+        k = zeros((4,2),dtype=object)
         t = ts[i]
         h = ts[i+1]-ts[i]
-        k = []
-        k.append(fun(t + h*c[0], array([y[i,0] , y[i,1]])))
-        k.append(fun(t + h*c[1], array([y[i,0] + h*A[1,0]*k[-1][0], y[i,1] + h*A[1,0]*k[-1][1]])))
-        k.append(fun(t + h*c[2], array([y[i,0] + h*A[2,1]*k[-1][0], y[i,1] + h*A[2,1]*k[-1][1]])))
-        k.append(fun(t + h*c[3], array([y[i,0] + h*A[3,2]*k[-1][0], y[i,1] + h*A[3,2]*k[-1][1]])))  
         s1 = 0
         s2 = 0
-        for j in range(len(k)):
-            w = b[j]*k[j]
-            s1 = s1 + w[0]
-            s2 = s2 + w[1]
-        y[i+1,:]=array([y[-1][0] + h*s1,y[-1][1] + h*s2])
+        for j in range(4):
+            k[j,:] = fun(t + h*c[j],array([ y[i,0] + h*sum(A[j,:]*k[:,0]), y[i,1] + h*sum(A[j,:]*k[:,1])])) 
+            w = b[j]*k[j,:]
+            s1 += w[0]
+            s2 += w[1]
+        y[i+1,:] = array([y[i,0] + h*s1,y[i,1] + h*s2])
     return y
     
 def rightside(t,y):
@@ -793,27 +854,28 @@ def rightsideT(t,y):
     return array([y[0] * (100-y[1]),-y[1] * (100-y[0])])
 
 
-
-
+#8192
 a = Tracenode(200.)
 b = Tracenode(100.)
-timevec = zeros(14)
-stepvec = array([1,2,4,8,16,64,128,256,512,1024,2048,4096,8192,16384])
-for i in range(len(stepvec)):
-    t1 = time()
-    v = rk_4T(rightsideT,array([a,b]),linspace(0,1/10,stepvec[i],endpoint=True))
-    t2 = time()
-    timevec[i] = t2-t1
-print(stepvec)
-print(timevec)
-loglog(stepvec,timevec,'r*-')
-title('Computing time')
-xlabel('number of steps')
-ylabel('time')
-axis([0,stepvec[13],0,timevec[13]])
-grid()
-show()
+def timerk():
+    timevec = zeros(12)
+    stepvec = array([1,2,4,8,16,64,128,256,512,1024,2048,4096])
+    for i in range(len(stepvec)):
+        t1 = time()
+        v = rk_4T(rightsideT,array([a,b]),linspace(0,1/10,stepvec[i],endpoint=True))
+        t2 = time()
+        timevec[i] = t2-t1
+    print(stepvec)
+    print(timevec)
+    loglog(stepvec,timevec,'r*-')
+    title('Computing time')
+    xlabel('number of steps')
+    ylabel('time')
+    axis([0,stepvec[11],0,timevec[11]])
+    grid()
+    show()
 
+v = rk_4T(rightsideT,array([a,b]),linspace(0,1/10,100,endpoint=True)) 
 #################################################################################
 #################################################################################
 #################################################################################        
@@ -827,14 +889,14 @@ show()
 #p = testfunction3(u,v)
 #print('The result is {} and has tracer number {}.'.format(p.x, p.i))
     
-##def testfunction2(w):
-##    A = array([[1,0],[0,1]])
-##    b = dot(A,w)
-##    return b
-##    
-##l1 = Tracenode(2.)
-##l2 = Tracenode(1.)  
-##l3 = testfunction2(array([l1,l2]))
+def testfunction2(w):
+    A = array([[1,0],[0,1]])
+    b = dot(A,w)
+    return b
+    
+#l1 = Tracenode(2.)
+#l2 = Tracenode(1.)  
+#l3 = testfunction2(array([l1,l2]))
 
 ##print('The result is [{},{}].'.format(l3[0].x,l3[1].x))
 #    
