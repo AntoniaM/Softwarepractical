@@ -80,7 +80,7 @@ def test_identity():
     #test function setvisitedfalse:
     l4 = Tracenode(3.)
     l4.visited = True
-    setvisitedfalse([l4])
+    setvisitedfalse([l4],'up')
     if l4.visited == True:
         raise Exception('Method setvisitedfalse did not work the way it should..')
     

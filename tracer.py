@@ -50,7 +50,6 @@ class Tracenode(object):
         self.visited = False
         self.depth = 0
         Tracenode.it = Tracenode.it+1
-        #Tracenode.Tracenodelist.append(self) #stores all the during a function evaluation created objects of type Tracenode in a list.
         
 
     def __repr__(self):
@@ -79,7 +78,7 @@ class Tracenode(object):
                             Tracenode and integer, Tracenode and float. and vice versa.
         -input:     Tracenode, Tracenode/integer/float
         -output:    Tracenode addit, where addit.x contains the value of the addition, 
-                    addit.origin contains a list of the tracenumbers of the summands,
+                    addit.parents contains a list of the tracenumbers of the summands,
                     addit.operation states, that addit was created by an addition
         '''
         if not isinstance(other, Tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
@@ -88,11 +87,14 @@ class Tracenode(object):
             else: 
                 if not isinstance(other,float):
                     raise TypeError('Addition is only defined for types Tracenode and Tracenode or float or int.')
-            addit = Tracenode(self.x + other)     
-            addit.opconst = other 
-            addit.parents = [self] 
-            addit.origin = self.origin
-            addit.depth = self.depth + 1
+            if other == 0:
+                return self
+            else:
+                addit = Tracenode(self.x + other)     
+                addit.opconst = other 
+                addit.parents = [self] 
+                addit.origin = self.origin
+                addit.depth = self.depth + 1
         else:
             addit = Tracenode(self.x + other.x)          
             addit.parents = [self, other]
@@ -101,7 +103,6 @@ class Tracenode(object):
             addit.depth = max(self.depth,other.depth) +1
         self.children.append(addit)
         addit.operation = 'add'
-        #print(addit)
         return addit
 
 
@@ -117,7 +118,7 @@ class Tracenode(object):
                             Tracenode and integer, Tracenode and float. and vice versa.
         -input:     Tracenode, Tracenode/integer/float
         -output:    Tracenode subtr, where subtr.x contains the value of the subtraction,
-                    subtr.origin contains a list of the tracenumbers of the summands
+                    subtr.parents contains a list of the tracenumbers of the summands
         '''
         if not isinstance(other, Tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
             if isinstance(other, int):
@@ -125,11 +126,14 @@ class Tracenode(object):
             else:
                 if not isinstance(other,float): 
                     raise TypeError('Subtraction is only defined for types Tracenode and Tracenode or float or int.')
-            subtr = Tracenode(self.x - other)     
-            subtr.opconst = other
-            subtr.parents = [self]   
-            subtr.origin = self.origin
-            subtr.depth = self.depth + 1
+            if other == 0:
+                return self
+            else:
+                subtr = Tracenode(self.x - other)     
+                subtr.opconst = other
+                subtr.parents = [self]   
+                subtr.origin = self.origin
+                subtr.depth = self.depth + 1
         else:
             subtr = Tracenode(self.x - other.x)     
             subtr.parents = [self, other]
@@ -138,7 +142,6 @@ class Tracenode(object):
             subtr.depth = max(self.depth,other.depth) +1
         self.children.append(subtr)
         subtr.operation = 'sub' 
-        #print(subtr)
         return subtr
     
     def __rsub__(self,other):
@@ -161,7 +164,6 @@ class Tracenode(object):
             subtr.depth = max(self.depth,other.depth) +1
         self.children.append(subtr)
         subtr.operation = 'rsub' 
-        #print(subtr)
         return subtr
         
             
@@ -182,7 +184,7 @@ class Tracenode(object):
                             Tracenode and integer, Tracenode and float. and vice versa.
         -input:     Tracenode, Tracenode/integer/float
         -output:    Tracenode multip, where multip.x contains the resultvalue of the multiplication,
-                    multip.origin contains a list of the tracenumbers of the factors.
+                    multip.parents contains a list of the tracenumbers of the factors.
         '''
         if not isinstance(other, Tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...            
             if isinstance(other, int):
@@ -190,11 +192,14 @@ class Tracenode(object):
             else: 
                 if not isinstance(other,float):
                     raise TypeError('Multiplication is only defined for types Tracenode and Tracenode or float or int.')
-            multip = Tracenode(self.x * other)     
-            multip.opconst = other
-            multip.parents = [self] 
-            multip.origin = self.origin
-            multip.depth = self.depth +1
+            if other == 1:
+                return self
+            else:
+                multip = Tracenode(self.x * other)     
+                multip.opconst = other
+                multip.parents = [self] 
+                multip.origin = self.origin
+                multip.depth = self.depth +1
         else:
             multip = Tracenode(self.x * other.x)
             multip.parents = [self, other]
@@ -203,9 +208,8 @@ class Tracenode(object):
             multip.depth = max(self.depth,other.depth) +1
         self.children.append(multip)
         multip.operation = 'mul'  
-        #print(multip)
         return multip
-        
+    
         
     def __rmul__(self,other):
         return self*other
@@ -217,7 +221,7 @@ class Tracenode(object):
                             Tracenode and integer, Tracenode and float. and vice versa.
         -input:     Tracenode, Tracenode/integer/float
         -output:    Tracenode divis, where divis.x contains the resultvalue of the division,
-                    divis.origin contains a list of the tracenumbers of the factors.
+                    divis.parents contains a list of the tracenumbers of the factors.
         '''
         if not isinstance(other, Tracenode):        #for v+2 e.g., we first look, if there already was a node created for this 2 or if we have to create a new one...               
             if other ==0:
@@ -227,6 +231,8 @@ class Tracenode(object):
             else:
                 if not isinstance(other,float): 
                     raise TypeError('Division is only defined for types Tracenode and Tracenode or float or int.')
+            if other ==1:
+                return self
             divis = Tracenode(self.x / other)     
             divis.opconst = other
             divis.parents = [self]  
@@ -240,7 +246,6 @@ class Tracenode(object):
             divis.depth = max(self.depth,other.depth) +1
         self.children.append(divis)
         divis.operation = 'div'
-        #print(divis)
         return divis
         
         
@@ -250,7 +255,7 @@ class Tracenode(object):
                         data of type Tracenodes can be taken to the power of data of type integers.
         -input:     Tracenode, integer
         -output:    Tracenode power, where power.x contains the value of the Tracenodevalue to the power of the integer,
-                    power.origin contains a list (with only one element) of the tracenumber of the Tracenode, 
+                    power.parents contains a list (with only one element) of the tracenumber of the Tracenode, 
                     which is taken to the power of the integer..
         '''
         if not isinstance(other, int):
@@ -262,7 +267,6 @@ class Tracenode(object):
         power.opconst = other
         power.origin = self.origin
         power.depth = self.depth +1
-        #print(power)
         return power
         
         
@@ -278,7 +282,6 @@ class Tracenode(object):
         sinu.parents = [self]
         sinu.origin = self.origin
         sinu.depth = self.depth +1
-        #print(sinu)
         return sinu
         
     def cos(self):
@@ -292,7 +295,6 @@ class Tracenode(object):
         cosi.parents = [self]
         cosi.origin = self.origin
         cosi.depth = self.depth +1
-        #print(cosi)
         return cosi
         
         
@@ -307,7 +309,6 @@ class Tracenode(object):
         expo.origin = self.origin
         expo.parents = [self]
         expo.depth = self.depth +1
-        #print(expo) 
         return expo
         
     
@@ -348,13 +349,7 @@ class Tracenode(object):
                         break #to avoid an index error, we break from the for-loop, when a child has been deleted from the children list.
         
         
-        
-        
-    
-
-
-
-
+   
 
         
 
@@ -392,21 +387,16 @@ class Graph(object):
         
         
     def __repr__(self):
-#        printlist = self.independent
-#        while len(printlist)>0:
-#            print(printlist[0])
-#            for i in range(len(printlist[0].children)):
-#                marker2 = False
-#                for j in range(len(printlist)):
-#                    if printlist[0].children[i] == printlist[j]:
-#                        marker2 = True
-#                if marker2 == False:
-#                    printlist = printlist + [printlist[0].children[i]]
-#            del(printlist[0])
         return '\n-------------------------------------------------\nindependents: \n{}\n-------------------------------------------------\ndependents: \n{}'.format(self.independent,self.dependent)
         
         
-        
+    def sparsity_pattern(self):
+        SparsePattern = zeros((len(self.dependent),len(self.independent)))
+        for i in range(len(self.dependent)):
+            for j in range(len(self.independent)):
+                if self.dependent[i] in self.independent[j].contributesto:
+                    SparsePattern[i,j] = 1
+        spy(SparsePattern)
         
     def optimize(self, depvar):
         '''
@@ -561,7 +551,6 @@ class Graph(object):
             newid[self.independent[i].i] = self.independent[i].i
         for k in range(size-len(self.independent)):            
             if len(storelist)>k:
-                print(s)
                 node = storelist[k]
                 newid[node.i] = k+len(self.independent)
                 for j in range(len(node.children)):
@@ -606,12 +595,10 @@ class Graph(object):
             s = s + '   y[{}] = v[{}];\n'.format(j,newid[self.dependent[j].i])
         s = 'void fun(double x[], double y[])\n{\n' + '   double v[{}];\n'.format(newid[size-1]+1)+ s
         s = s + '}'
-        print('now set visited on false')
-        setvisitedfalse(self.independent,'down') #we're done. so we set all the visited-attributes back to False
         print(s)
         with open(filename, 'w') as cfile: #write the string in a c-file with name filename
             cfile.write(s)
-          
+        setvisitedfalse(self.dependent,'up') #we're done. so we set all the visited-attributes back to False
           
             
 def setvisitedfalse(nodelist,direction):
@@ -625,26 +612,32 @@ def setvisitedfalse(nodelist,direction):
     storelist = nodelist
     if direction == 'down':
         while len(storelist)>0:
-            storelist = storelist + storelist[0].children
-            storelist[0].visited = False
-            del(storelist[0])
-    if direction == 'up': 
-#        while len(storelist)>0:
-#            if not storelist[0].operation == 'Id':
-#                storelist = storelist + storelist[0].parents
-#            storelist[0].visited = False
-#            del(storelist[0])
-        while len(storelist)>0:
             if storelist[0].visited == False:
-                del[storelist[0]]
+                storelist = storelist + storelist[0].children
+                del(storelist[0])
             else:
                 storelist[0].visited = False
-                if storelist[0].operation == 'Id':
-                    del(storelist[0])
-                else:
-                    storelist  = storelist[0].parents + storelist
+            #storelist = storelist + storelist[0].children
+            #storelist[0].visited = False
+            #del(storelist[0])
     else:
-        raise Exception('Possible directions for setvisited false are "up" and "down".')
+        if direction == 'up': 
+    #        while len(storelist)>0:
+    #            if not storelist[0].operation == 'Id':
+    #                storelist = storelist + storelist[0].parents
+    #            storelist[0].visited = False
+    #            del(storelist[0])
+            while len(storelist)>0:
+                if storelist[0].visited == False:
+                    del[storelist[0]]
+                else:
+                    storelist[0].visited = False
+                    if storelist[0].operation == 'Id':
+                        del(storelist[0])
+                    else:
+                        storelist  = storelist[0].parents + storelist
+        else:
+            raise Exception('Possible directions for setvisited false are "up" and "down".')
             
 def set_contributestonew(result):
     '''
@@ -678,6 +671,9 @@ def set_contributestonew(result):
                     node.contributesto = set([node])
                 for j in range(len(node.children)):
                     node.contributesto = node.contributesto | node.children[j].contributesto
+                if node.operation == 'mul':
+                    if node.opconst == 0:
+                        node.contributesto = set()
                 node.visited = True
                 if node.operation == 'Id':
                     del(storelist[0])
@@ -688,9 +684,9 @@ def set_contributestonew(result):
                             
     for k in range(len(result)):
         contributesto([result[k]])
-        print('first')
+        #print('first')
         setvisitedfalse([result[k]],'up')
-        print('now go to second')
+        #print('now go to second')
     #storelist = []
     #for i in range(len(result)):
      #   storelist = storelist + [result[i]]
@@ -854,9 +850,8 @@ def rightsideT(t,y):
     return array([y[0] * (100-y[1]),-y[1] * (100-y[0])])
 
 
-#8192
-a = Tracenode(200.)
-b = Tracenode(100.)
+#a = Tracenode(200.)
+#b = Tracenode(100.)
 def timerk():
     timevec = zeros(12)
     stepvec = array([1,2,4,8,16,64,128,256,512,1024,2048,4096])
@@ -875,7 +870,9 @@ def timerk():
     grid()
     show()
 
-v = rk_4T(rightsideT,array([a,b]),linspace(0,1/10,100,endpoint=True)) 
+a = Tracenode(100.)
+b = Tracenode(200.)
+v = rk_4T(rightsideT,array([a,b]),linspace(0,1/10,21,endpoint=True)) 
 #################################################################################
 #################################################################################
 #################################################################################        
@@ -890,50 +887,27 @@ v = rk_4T(rightsideT,array([a,b]),linspace(0,1/10,100,endpoint=True))
 #print('The result is {} and has tracer number {}.'.format(p.x, p.i))
     
 def testfunction2(w):
-    A = array([[1,0],[0,1]])
+    A = array([[1,0],[0,0]])
     b = dot(A,w)
     return b
     
 #l1 = Tracenode(2.)
 #l2 = Tracenode(1.)  
+#l3 = Tracenode(4.)
+#l6 = Tracenode(1.)
+#l7 = Tracenode(1.)
+#l8 = Tracenode(1.)
 #l3 = testfunction2(array([l1,l2]))
 
+def testfunc1(w):
+    return array([w[0]*w[1],w[1]*w[2],w[2]*w[3]])
+#l4 = testfunc1(array([l1,l2,l3,l6]))
+
+
+def testfunc2(w):
+    A = array([[1,0,0,0,0,0],[0,0,0,2,2,0],[0,0,0,0,0,1],[0,0,1,0,0,1],[0,0,0,0,1,0],[0,3,0,0,0,0]])
+    return dot(A,w)
+#l5 = testfunc2(array([l1,l2,l3,l6,l7,l8]))
+
+
 ##print('The result is [{},{}].'.format(l3[0].x,l3[1].x))
-#    
-#def testfunction4(u,v):
-#    return 2*u*v*2*2*3
-#p2 = testfunction4(u,v)
-#print('the result is {} and has tracer number {}.'.format(p2.x,p2.i))
-#    
-#def testfunction5(u,v):
-#    return u-v
-#p5 = testfunction5(u,v)
-#print('the result is {} and has tracer number {}.'.format(p5.x,p5.i))
-#    
-#def testfunction6(u,v):
-#    return v**2-1
-#p6 = testfunction6(u,v)
-#print('the result is {} and has tracer number {}.'.format(p6.x,p6.i))
-#
-#    
-#def testfunction7(w):
-#    A = array([[1,0],[0,1]])
-#    B = array([[1,0],[0,1]])
-#    return dot(dot(A,B),w)
-#    
-#p7 = testfunction7(array([l1,l2]))
-#print('The result is [{},{}].'.format(p7[0].x,p7[1].x))
-#
-#def testfunction8():
-#    q = Tracenode(0.)
-#    r = Tracenode(1.)
-#    s = Tracenode(2.)
-#    t = Tracenode(3.)
-#
-#    A = array([[r,s],[q,r]])
-#    B = array([[t,r],[r,s]])
-#    print(dot(A,B))
-#    return dot(A,B)
-#
-#p8 = testfunction8()
-#print('The result is \n[[{},{}],\n [{},{}]].'.format(p8[0][0].x,p8[0][1].x,p8[1][0].x,p8[1][1].x))
